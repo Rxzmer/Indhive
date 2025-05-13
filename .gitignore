@@ -1,0 +1,24 @@
+# Java
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Node/React
+node_modules/
+dist/
+npm-debug.log*
+
+# IDE
+.idea/
+*.iml
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml
+
+# Env files
+.env
+*.env
