@@ -1,4 +1,4 @@
-package com.indihive;
+package com.indhive;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
