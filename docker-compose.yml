@@ -1,51 +1,44 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:13
+    container_name: db  # Esta línea estaba bien
     environment:
       POSTGRES_DB: indihive_db
       POSTGRES_USER: indihive_user
       POSTGRES_PASSWORD: password
-    container_name: indihive-db
-    env_file: .env
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: ["CMD-SHELL", "pg_isready -U indihive_user -d indihive_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file: .env
-    ports:
-      - "8080:8080"
+    build: ./backend
+    container_name: spring_app  # Esta línea estaba bien
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/indihive_db
+      SPRING_DATASOURCE_USERNAME: indihive_user
+      SPRING_DATASOURCE_PASSWORD: password
+      JWT_SECRET: supersecret
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
+    ports:
+      - "8080:8080"
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    env_file: .env
+    build: ./frontend
+    container_name: react_app  # Esta línea estaba bien
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    stdin_open: true
-    tty: true
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
