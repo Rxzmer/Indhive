@@ -1,9 +1,13 @@
 package com.indhive.repository;
 
-import com.indhive.model.Proyecto;
+import com.indhive.model.User;
+
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ProyectoRepository extends JpaRepository<Proyecto, Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
+
 }
