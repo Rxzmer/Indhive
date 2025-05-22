@@ -9,7 +9,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
-
     @EntityGraph(attributePaths = { "collaborators" })
-    List<Project> findAllWithCollaborators();
+    @org.springframework.lang.NonNull
+    List<Project> findAll();
 }
+
