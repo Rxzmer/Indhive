@@ -7,7 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -16,13 +18,13 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // rxzmer: obtener todos los usuarios
+    // Obtener todos los usuarios
     @GetMapping
     public List<User> listar() {
         return userService.listarUsuarios();
     }
 
-    // rxzmer: obtener un usuario por su ID
+    // Obtener usuario por id
     @GetMapping("/{id}")
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
@@ -30,24 +32,25 @@ public class UserController {
                       .orElse(ResponseEntity.notFound().build());
     }
 
-    // rxzmer: crear un nuevo usuario
+    // Crear nuevo usuario
     @PostMapping
     public User crear(@RequestBody User usuario) {
         return userService.guardarUsuario(usuario);
     }
 
-    // rxzmer: actualizar un usuario existente
+    // Actualizar usuario existente
     @PutMapping("/{id}")
     public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
         return userService.obtenerUsuarioPorId(id)
                 .map(u -> {
-                    u.setNombre(usuario.getNombre());
+                    u.setUsername(usuario.getUsername());
                     u.setEmail(usuario.getEmail());
+                    u.setRole(usuario.getRole());
                     return ResponseEntity.ok(userService.guardarUsuario(u));
                 }).orElse(ResponseEntity.notFound().build());
     }
 
-    // rxzmer: eliminar un usuario por su ID
+    // Eliminar usuario por id
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         if (userService.obtenerUsuarioPorId(id).isPresent()) {
@@ -55,5 +58,21 @@ public class UserController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // Listar proyectos de un usuario
+    @GetMapping("/{id}/proyectos")
+    public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
+        Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        User user = userOpt.get();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("ownedProjects", user.getOwnedProjects());
+        response.put("collaboratedProjects", user.getCollaboratedProjects());
+
+        return ResponseEntity.ok(response);
     }
 }

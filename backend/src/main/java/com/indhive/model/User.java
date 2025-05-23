@@ -1,10 +1,9 @@
 package com.indhive.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "usuarios")
@@ -14,28 +13,25 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nombre;
+    private String username;
 
     private String email;
 
-    // rxzmer: relación Many-to-Many con Project
-    // rxzmer: aquí se mapea la relación inversa de 'collaborators' en Project
-    // rxzmer: un usuario puede colaborar en muchos proyectos
-    @ManyToMany(mappedBy = "collaborators")
-    private Set<Project> collaboratedProjects = new HashSet<>();
+    private String role = "USER";  // Roles: "CREADOR", "ARTISTA", etc.
 
-    // rxzmer: relación One-to-Many con Project
-    // rxzmer: un usuario puede ser dueño (propietario) de muchos proyectos
-    @OneToMany(mappedBy = "owner")
+    @OneToMany(mappedBy = "owner", fetch = FetchType.EAGER)
     @JsonManagedReference
     private Set<Project> ownedProjects = new HashSet<>();
 
-    // Constructores
+    @ManyToMany(mappedBy = "collaborators", fetch = FetchType.EAGER)
+    private Set<Project> collaboratedProjects = new HashSet<>();
+
     public User() {}
 
-    public User(String nombre, String email) {
-        this.nombre = nombre;
+    public User(String username, String email, String role) {
+        this.username = username;
         this.email = email;
+        this.role = role;
     }
 
     // Getters y setters
@@ -48,12 +44,12 @@ public class User {
         this.id = id;
     }
 
-    public String getNombre() {
-        return nombre;
+    public String getUsername() {
+        return username;
     }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
@@ -64,12 +60,12 @@ public class User {
         this.email = email;
     }
 
-    public Set<Project> getCollaboratedProjects() {
-        return collaboratedProjects;
+    public String getRole() {
+        return role;
     }
 
-    public void setCollaboratedProjects(Set<Project> collaboratedProjects) {
-        this.collaboratedProjects = collaboratedProjects;
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public Set<Project> getOwnedProjects() {
@@ -78,5 +74,13 @@ public class User {
 
     public void setOwnedProjects(Set<Project> ownedProjects) {
         this.ownedProjects = ownedProjects;
+    }
+
+    public Set<Project> getCollaboratedProjects() {
+        return collaboratedProjects;
+    }
+
+    public void setCollaboratedProjects(Set<Project> collaboratedProjects) {
+        this.collaboratedProjects = collaboratedProjects;
     }
 }

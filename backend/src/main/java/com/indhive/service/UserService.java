@@ -1,7 +1,8 @@
 package com.indhive.service;
 
 import com.indhive.model.User;
-import com.indhive.repository.UserRepository; 
+import com.indhive.repository.UserRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
