@@ -13,7 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity  // <-- IMPORTANTE para activar seguridad web
+@EnableWebSecurity  // <-- rxzmer: activar seguridad web
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -34,7 +34,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        // Usa el DaoAuthenticationProvider definido para autenticar
+        // rxzmer: usa el DaoAuthenticationProvider definido para autenticar
         return authConfig.getAuthenticationManager();
     }
 
@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider())  // REGISTRA el provider con UserDetailsService
+            .authenticationProvider(authenticationProvider())  // rxzmer: registra el provider con UserDetailsService
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
