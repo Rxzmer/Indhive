@@ -9,6 +9,9 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "proyectos")
 public class Project {
@@ -30,6 +33,7 @@ public class Project {
         referencedColumnName = "id",
         foreignKey = @ForeignKey(name = "fk_project_owner")
     )
+    @OnDelete(action = OnDeleteAction.CASCADE)  // <-- Aquí está el cambio importante
     @JsonBackReference
     private User owner;
 
@@ -57,7 +61,8 @@ public class Project {
         this.owner = owner;
     }
 
-    // Getters y setters
+    // Getters y setters (sin cambios)
+
     public Long getId() {
         return id;
     }
