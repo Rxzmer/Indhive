@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:13
-    container_name: db  # Esta línea estaba bien
+    container_name: db
     environment:
       POSTGRES_DB: indihive_db
       POSTGRES_USER: indihive_user
@@ -18,12 +18,13 @@ services:
 
   backend:
     build: ./backend
-    container_name: spring_app  # Esta línea estaba bien
+    container_name: spring_app
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/indihive_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/indihive_db  
       SPRING_DATASOURCE_USERNAME: indihive_user
       SPRING_DATASOURCE_PASSWORD: password
-      JWT_SECRET: supersecret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create
+      JWT_SECRET: una_clave_super_segura_y_larga_que_deberias_cambiar_mas_de_32_bytes
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +33,7 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: react_app  # Esta línea estaba bien
+    container_name: react_app
     environment:
       REACT_APP_API_URL: http://localhost:8080
     ports:

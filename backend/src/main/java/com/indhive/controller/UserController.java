@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/usuarios")
+@RequestMapping("/api/users")  // Cambié a inglés para consistencia
 public class UserController {
 
     @Autowired
@@ -28,27 +28,36 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
-        return userOpt.map(ResponseEntity::ok)
-                      .orElse(ResponseEntity.notFound().build());
+        return userOpt.map(user -> {
+                    user.setPassword(null);  // No devolver la contraseña
+                    return ResponseEntity.ok(user);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // Crear nuevo usuario
     @PostMapping
-    public User crear(@RequestBody User usuario) {
-        return userService.guardarUsuario(usuario);
+public ResponseEntity<User> crear(@RequestBody User usuario) {
+    if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
+        usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
     }
+    User savedUser = userService.guardarUsuario(usuario);
+    savedUser.setPassword(null);
+    return ResponseEntity.ok(savedUser);
+}
 
-    // Actualizar usuario existente
-    @PutMapping("/{id}")
-    public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
-        return userService.obtenerUsuarioPorId(id)
-                .map(u -> {
-                    u.setUsername(usuario.getUsername());
-                    u.setEmail(usuario.getEmail());
-                    u.setRole(usuario.getRole());
-                    return ResponseEntity.ok(userService.guardarUsuario(u));
-                }).orElse(ResponseEntity.notFound().build());
-    }
+@PutMapping("/{id}")
+public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
+    return userService.obtenerUsuarioPorId(id)
+            .map(u -> {
+                u.setUsername(usuario.getUsername());
+                u.setEmail(usuario.getEmail());
+                u.setRoles(usuario.getRoles());
+                User updated = userService.guardarUsuario(u);
+                updated.setPassword(null);
+                return ResponseEntity.ok(updated);
+            }).orElse(ResponseEntity.notFound().build());
+}
 
     // Eliminar usuario por id
     @DeleteMapping("/{id}")
@@ -61,7 +70,7 @@ public class UserController {
     }
 
     // Listar proyectos de un usuario
-    @GetMapping("/{id}/proyectos")
+    @GetMapping("/{id}/projects")
     public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
         if (userOpt.isEmpty()) {

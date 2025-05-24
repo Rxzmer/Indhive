@@ -13,29 +13,29 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/proyectos")
+@RequestMapping("/api/projects")  // en inglés para consistencia
 public class ProjectController {
 
     @Autowired
-    private ProjectService proyectoService;
+    private ProjectService projectService;
 
     @Autowired
     private UserService userService;
 
     @GetMapping
     public List<Project> listar() {
-        return proyectoService.listarProyectos();
+        return projectService.listarProyectos();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Project> obtenerPorId(@PathVariable Long id) {
-        return proyectoService.obtenerProyectoPorId(id)
+        return projectService.obtenerProyectoPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody Project proyecto,
+    public ResponseEntity<?> crear(@RequestBody Project project,
                                   @RequestHeader("X-User-Id") Long userId) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(userId);
         if (userOpt.isEmpty()) {
@@ -43,21 +43,24 @@ public class ProjectController {
         }
         User user = userOpt.get();
 
-        // Validar rol
-        if (!"CREADOR".equalsIgnoreCase(user.getRole())) {
+        // Validar si el rol contiene "CREADOR"
+        boolean tieneRolCreador = user.getRoles() != null &&
+                                  user.getRoles().toUpperCase().contains("CREADOR");
+
+        if (!tieneRolCreador) {
             return ResponseEntity.status(403).body("Solo usuarios con rol CREADOR pueden crear proyectos");
         }
 
-        proyecto.setOwner(user);
-        Project creado = proyectoService.guardarProyecto(proyecto);
+        project.setOwner(user);
+        Project creado = projectService.guardarProyecto(project);
         return ResponseEntity.ok(creado);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Project> actualizar(@PathVariable Long id,
-                                              @RequestBody Project proyecto,
+                                              @RequestBody Project project,
                                               @RequestHeader("X-User-Id") Long userId) {
-        Optional<Project> proyectoOpt = proyectoService.obtenerProyectoPorId(id);
+        Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -67,18 +70,18 @@ public class ProjectController {
             return ResponseEntity.status(403).build();
         }
 
-        proyectoExistente.setTitle(proyecto.getTitle());
-        proyectoExistente.setDescription(proyecto.getDescription());
-        proyectoExistente.setCollaborators(proyecto.getCollaborators());
+        proyectoExistente.setTitle(project.getTitle());
+        proyectoExistente.setDescription(project.getDescription());
+        proyectoExistente.setCollaborators(project.getCollaborators());
 
-        Project actualizado = proyectoService.guardarProyecto(proyectoExistente);
+        Project actualizado = projectService.guardarProyecto(proyectoExistente);
         return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id,
                                          @RequestHeader("X-User-Id") Long userId) {
-        Optional<Project> proyectoOpt = proyectoService.obtenerProyectoPorId(id);
+        Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -88,7 +91,7 @@ public class ProjectController {
             return ResponseEntity.status(403).build();
         }
 
-        proyectoService.eliminarProyecto(id);
+        projectService.eliminarProyecto(id);
         return ResponseEntity.ok().build();
     }
 }

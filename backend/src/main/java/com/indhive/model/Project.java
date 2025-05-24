@@ -22,23 +22,33 @@ public class Project {
 
     private String description;
 
-    // rxzmer: relación Many-to-One con User, representa al dueño del proyecto (propietario)
+    // Relación Many-to-One con User, representa al dueño del proyecto (propietario)
     @ManyToOne
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(
+        name = "owner_id",
+        nullable = false,
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(name = "fk_project_owner")
+    )
     @JsonBackReference
     private User owner;
 
-    // rxzmer: relación Many-to-Many con usuarios colaboradores del proyecto
+    // Relación Many-to-Many con usuarios colaboradores del proyecto
     @ManyToMany
     @JsonIgnore
     @JoinTable(
-        name = "project_collaborators",  // rxzmer: tabla intermedia para la relación Many-to-Many
+        name = "project_collaborators",
         joinColumns = @JoinColumn(name = "project_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
+        inverseJoinColumns = @JoinColumn(
+            name = "user_id",
+            referencedColumnName = "id"
+        ),
+        foreignKey = @ForeignKey(name = "fk_project_collaborators_project"),
+        inverseForeignKey = @ForeignKey(name = "fk_project_collaborators_user")
     )
     private Set<User> collaborators = new HashSet<>();
 
-    // constructores
+    // Constructores
     public Project() {}
 
     public Project(String title, String description, User owner) {
@@ -47,7 +57,7 @@ public class Project {
         this.owner = owner;
     }
 
-    // getters y setters
+    // Getters y setters
     public Long getId() {
         return id;
     }

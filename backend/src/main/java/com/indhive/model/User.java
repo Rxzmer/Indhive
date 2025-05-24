@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.Arrays;
 
 @Entity
 @Table(name = "usuarios")
@@ -17,7 +19,11 @@ public class User {
 
     private String email;
 
-    private String role = "USER";  // Roles: "CREADOR", "ARTISTA", etc.
+    // Cambié a roles para permitir múltiples roles separados por coma
+    private String roles = "ROLE_USER";
+
+    // Agregamos el password que faltaba
+    private String password;
 
     @OneToMany(mappedBy = "owner", fetch = FetchType.EAGER)
     @JsonManagedReference
@@ -26,12 +32,14 @@ public class User {
     @ManyToMany(mappedBy = "collaborators", fetch = FetchType.EAGER)
     private Set<Project> collaboratedProjects = new HashSet<>();
 
-    public User() {}
+    public User() {
+    }
 
-    public User(String username, String email, String role) {
+    public User(String username, String email, String roles, String password) {
         this.username = username;
         this.email = email;
-        this.role = role;
+        this.roles = roles;
+        this.password = password;
     }
 
     // Getters y setters
@@ -60,12 +68,26 @@ public class User {
         this.email = email;
     }
 
-    public String getRole() {
-        return role;
+    public String getRoles() {
+        return roles;
     }
 
-    public void setRole(String role) {
-        this.role = role;
+    public void setRoles(String roles) {
+        if (roles != null) {
+            this.roles = Arrays.stream(roles.split(","))
+                    .map(role -> role.trim().startsWith("ROLE_") ? role.trim() : "ROLE_" + role.trim())
+                    .collect(Collectors.joining(","));
+        } else {
+            this.roles = null;
+        }
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public Set<Project> getOwnedProjects() {

@@ -3,13 +3,27 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+jwt:
+  secret: ${JWT_SECRET:una_clave_por_defecto_super_segura_y_larga_mas_de_32_bytes}
+  expirationMs: 86400000
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.authentication: DEBUG
+    org.springframework.security.web: DEBUG
+    org.springframework.web.filter: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 server:
   port: 8080
