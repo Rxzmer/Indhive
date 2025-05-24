@@ -24,12 +24,14 @@ public class ProjectController {
     @Autowired
     private UserService userService;
 
+    // Listar todos los proyectos (cualquiera autenticado)
     @GetMapping
-    @PreAuthorize("isAuthenticated()") // Cualquiera autenticado puede listar proyectos
+    @PreAuthorize("isAuthenticated()")
     public List<Project> listar() {
         return projectService.listarProyectos();
     }
 
+    // Obtener proyecto por id (cualquiera autenticado)
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Project> obtenerPorId(@PathVariable Long id) {
@@ -38,8 +40,9 @@ public class ProjectController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Crear proyecto (solo ADMIN o CREATOR)
     @PostMapping
-    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')")  // Solo roles CREADOR o ADMIN pueden crear
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<?> crear(@RequestBody Project project, Authentication authentication) {
         String username = authentication.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
@@ -52,8 +55,9 @@ public class ProjectController {
         return ResponseEntity.ok(creado);
     }
 
+    // Actualizar proyecto (solo ADMIN o CREATOR y dueño)
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')") // Solo roles CREADOR o ADMIN pueden actualizar
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<Project> actualizar(@PathVariable Long id,
                                               @RequestBody Project project,
                                               Authentication authentication) {
@@ -64,7 +68,9 @@ public class ProjectController {
         Project proyectoExistente = proyectoOpt.get();
 
         String username = authentication.getName();
-        if (!proyectoExistente.getOwner().getUsername().equals(username)) {
+
+        // Validar que sea dueño para actualizar
+        if (!proyectoExistente.getOwner().getUsername().trim().equalsIgnoreCase(username.trim())) {
             return ResponseEntity.status(403).build();
         }
 
@@ -76,8 +82,9 @@ public class ProjectController {
         return ResponseEntity.ok(actualizado);
     }
 
+    // Eliminar proyecto (solo ADMIN o CREATOR y dueño)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')") // Solo roles CREADOR o ADMIN pueden eliminar
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {
@@ -86,7 +93,15 @@ public class ProjectController {
         Project proyecto = proyectoOpt.get();
 
         String username = authentication.getName();
-        if (!proyecto.getOwner().getUsername().equals(username)) {
+        User owner = proyecto.getOwner();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isOwner = owner != null && owner.getUsername() != null &&
+                          owner.getUsername().trim().equalsIgnoreCase(username.trim());
+
+        if (!isOwner && !isAdmin) {
             return ResponseEntity.status(403).build();
         }
 

@@ -63,7 +63,7 @@ public class AuthController {
 
             User user = userRepository.findByUsername(username).orElseThrow();
 
-            String token = jwtUtils.generateJwtToken(user.getUsername());
+            String token = jwtUtils.generateJwtToken(user.getUsername(), user.getRoles());
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {

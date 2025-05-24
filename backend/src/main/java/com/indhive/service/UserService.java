@@ -2,8 +2,8 @@ package com.indhive.service;
 
 import com.indhive.model.User;
 import com.indhive.repository.UserRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +15,9 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public List<User> listarUsuarios() {
         return userRepository.findAll();
     }
@@ -23,7 +26,11 @@ public class UserService {
         return userRepository.findById(id);
     }
 
+    // Guardar usuario y cifrar contraseña
     public User guardarUsuario(User usuario) {
+        if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
+            usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
+        }
         return userRepository.save(usuario);
     }
 
@@ -32,7 +39,6 @@ public class UserService {
     }
 
     public Optional<User> obtenerUsuarioPorUsername(String username) {
-        
-        throw new UnsupportedOperationException("Unimplemented method 'obtenerUsuarioPorUsername'");
+        return userRepository.findByUsername(username);
     }
 }

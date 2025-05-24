@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 
+
 @Component
 public class JwtUtils {
 
@@ -19,15 +20,18 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    public String generateJwtToken(String username) {
+    // Método para generar el token JWT
+    public String generateJwtToken(String username, String roles) {
         return Jwts.builder()
             .setSubject(username)
+            .claim("roles", roles)  // Aquí agregamos los roles al token
             .setIssuedAt(new Date())
             .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24h
             .signWith(getSigningKey(), SignatureAlgorithm.HS512)
             .compact();
     }
 
+    // Obtener el username desde el token JWT
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parserBuilder()
             .setSigningKey(getSigningKey())
@@ -37,6 +41,17 @@ public class JwtUtils {
             .getSubject();
     }
 
+    // Obtener los roles desde el token JWT
+    public String getRolesFromJwtToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+        return claims.get("roles", String.class);  // Extraemos los roles
+    }
+
+    // Validar el token JWT
     public boolean validateJwtToken(String authToken) {
         try {
             Jwts.parserBuilder()
