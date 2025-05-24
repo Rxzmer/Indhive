@@ -10,6 +10,8 @@ node_modules/
 dist/
 npm-debug.log*
 
+/backend/target
+
 # IDE
 .idea/
 *.iml
@@ -22,3 +24,4 @@ docker-compose.override.yml
 # Env files
 .env
 *.env
+.vscode/settings.json
