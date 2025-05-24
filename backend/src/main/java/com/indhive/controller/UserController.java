@@ -4,6 +4,7 @@ import com.indhive.model.User;
 import com.indhive.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,19 +13,20 @@ import java.util.Optional;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/users")  // Cambié a inglés para consistencia
+@RequestMapping("/api/users")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
-    // Obtener todos los usuarios
+    // Obtener todos los usuarios - Solo ADMIN puede acceder
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> listar() {
         return userService.listarUsuarios();
     }
 
-    // Obtener usuario por id
+    // Obtener usuario por id - cualquier usuario autenticado puede ver (o restringir si quieres)
     @GetMapping("/{id}")
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
@@ -35,32 +37,36 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Crear nuevo usuario
+    // Crear nuevo usuario - lo puede hacer cualquier usuario autenticado, o restringir si quieres
     @PostMapping
-public ResponseEntity<User> crear(@RequestBody User usuario) {
-    if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
-        usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
+    @PreAuthorize("hasRole('ADMIN')") // opcional, solo ADMIN puede crear usuarios
+    public ResponseEntity<User> crear(@RequestBody User usuario) {
+        if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
+            usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
+        }
+        User savedUser = userService.guardarUsuario(usuario);
+        savedUser.setPassword(null);
+        return ResponseEntity.ok(savedUser);
     }
-    User savedUser = userService.guardarUsuario(usuario);
-    savedUser.setPassword(null);
-    return ResponseEntity.ok(savedUser);
-}
 
-@PutMapping("/{id}")
-public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
-    return userService.obtenerUsuarioPorId(id)
-            .map(u -> {
-                u.setUsername(usuario.getUsername());
-                u.setEmail(usuario.getEmail());
-                u.setRoles(usuario.getRoles());
-                User updated = userService.guardarUsuario(u);
-                updated.setPassword(null);
-                return ResponseEntity.ok(updated);
-            }).orElse(ResponseEntity.notFound().build());
-}
+    // Actualizar usuario - solo ADMIN puede actualizar (o ajustar roles)
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
+        return userService.obtenerUsuarioPorId(id)
+                .map(u -> {
+                    u.setUsername(usuario.getUsername());
+                    u.setEmail(usuario.getEmail());
+                    u.setRoles(usuario.getRoles());
+                    User updated = userService.guardarUsuario(u);
+                    updated.setPassword(null);
+                    return ResponseEntity.ok(updated);
+                }).orElse(ResponseEntity.notFound().build());
+    }
 
-    // Eliminar usuario por id
+    // Eliminar usuario por id - solo ADMIN
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         if (userService.obtenerUsuarioPorId(id).isPresent()) {
             userService.eliminarUsuario(id);
@@ -69,7 +75,7 @@ public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User 
         return ResponseEntity.notFound().build();
     }
 
-    // Listar proyectos de un usuario
+    // Listar proyectos de un usuario - cualquier usuario autenticado puede ver
     @GetMapping("/{id}/projects")
     public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);

@@ -30,4 +30,9 @@ public class UserService {
     public void eliminarUsuario(Long id) {
         userRepository.deleteById(id);
     }
+
+    public Optional<User> obtenerUsuarioPorUsername(String username) {
+        
+        throw new UnsupportedOperationException("Unimplemented method 'obtenerUsuarioPorUsername'");
+    }
 }

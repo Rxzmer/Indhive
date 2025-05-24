@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;  // <--- Import necesario
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,7 +14,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity  // <-- rxzmer: activar seguridad web
+@EnableWebSecurity  // <-- activar seguridad web
+@EnableMethodSecurity  // <-- habilita @PreAuthorize y demás anotaciones de método
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -34,7 +36,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        // rxzmer: usa el DaoAuthenticationProvider definido para autenticar
+        // Usa el DaoAuthenticationProvider definido para autenticar
         return authConfig.getAuthenticationManager();
     }
 
@@ -46,7 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider())  // rxzmer: registra el provider con UserDetailsService
+            .authenticationProvider(authenticationProvider())  // registra el provider con UserDetailsService
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -7,13 +7,15 @@ import com.indhive.service.UserService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/projects")  // en inglés para consistencia
+@RequestMapping("/api/projects")
 public class ProjectController {
 
     @Autowired
@@ -23,11 +25,13 @@ public class ProjectController {
     private UserService userService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()") // Cualquiera autenticado puede listar proyectos
     public List<Project> listar() {
         return projectService.listarProyectos();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Project> obtenerPorId(@PathVariable Long id) {
         return projectService.obtenerProyectoPorId(id)
                 .map(ResponseEntity::ok)
@@ -35,38 +39,32 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody Project project,
-                                  @RequestHeader("X-User-Id") Long userId) {
-        Optional<User> userOpt = userService.obtenerUsuarioPorId(userId);
+    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')")  // Solo roles CREADOR o ADMIN pueden crear
+    public ResponseEntity<?> crear(@RequestBody Project project, Authentication authentication) {
+        String username = authentication.getName();
+        Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Usuario no encontrado");
         }
         User user = userOpt.get();
-
-        // Validar si el rol contiene "CREADOR"
-        boolean tieneRolCreador = user.getRoles() != null &&
-                                  user.getRoles().toUpperCase().contains("CREADOR");
-
-        if (!tieneRolCreador) {
-            return ResponseEntity.status(403).body("Solo usuarios con rol CREADOR pueden crear proyectos");
-        }
-
         project.setOwner(user);
         Project creado = projectService.guardarProyecto(project);
         return ResponseEntity.ok(creado);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')") // Solo roles CREADOR o ADMIN pueden actualizar
     public ResponseEntity<Project> actualizar(@PathVariable Long id,
                                               @RequestBody Project project,
-                                              @RequestHeader("X-User-Id") Long userId) {
+                                              Authentication authentication) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Project proyectoExistente = proyectoOpt.get();
 
-        if (!proyectoExistente.getOwner().getId().equals(userId)) {
+        String username = authentication.getName();
+        if (!proyectoExistente.getOwner().getUsername().equals(username)) {
             return ResponseEntity.status(403).build();
         }
 
@@ -79,15 +77,16 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id,
-                                         @RequestHeader("X-User-Id") Long userId) {
+    @PreAuthorize("hasAnyRole('CREADOR', 'ADMIN')") // Solo roles CREADOR o ADMIN pueden eliminar
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Project proyecto = proyectoOpt.get();
 
-        if (!proyecto.getOwner().getId().equals(userId)) {
+        String username = authentication.getName();
+        if (!proyecto.getOwner().getUsername().equals(username)) {
             return ResponseEntity.status(403).build();
         }
 
