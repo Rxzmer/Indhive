@@ -1,2 +1,28 @@
-.vscode/settings.json
+# Ignorar archivos de configuración de entorno
 .env
+backend/.env
+
+# Ignorar configuraciones de VS Code
+.vscode/
+
+# Archivos compilados de Java
+*.class
+
+# Directorio de compilación de Maven
+target/
+
+# Logs
+*.log
+
+# Archivos de Eclipse
+.project
+.classpath
+.settings/
+
+# Archivos de IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Archivos del sistema
+.DS_Store
