@@ -5,6 +5,12 @@ import com.indhive.model.User;
 import com.indhive.service.ProjectService;
 import com.indhive.service.UserService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +22,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/projects")
+@Tag(name = "Proyectos", description = "Gestión de proyectos: creación, edición, listado y eliminación")
 public class ProjectController {
 
     @Autowired
@@ -24,14 +31,22 @@ public class ProjectController {
     @Autowired
     private UserService userService;
 
-    // Listar todos los proyectos (cualquiera autenticado)
+    @Operation(summary = "Listar todos los proyectos",
+               description = "Obtiene la lista completa de proyectos disponibles para usuarios autenticados")
+    @ApiResponse(responseCode = "200", description = "Lista de proyectos", 
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = Project.class)))
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public List<Project> listar() {
         return projectService.listarProyectos();
     }
 
-    // Obtener proyecto por id (cualquiera autenticado)
+    @Operation(summary = "Obtener proyecto por ID",
+               description = "Obtiene la información detallada de un proyecto específico por su identificador")
+    @ApiResponse(responseCode = "200", description = "Proyecto encontrado",
+                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
+    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Project> obtenerPorId(@PathVariable Long id) {
@@ -40,9 +55,13 @@ public class ProjectController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Crear proyecto (solo ADMIN o CREATOR)
-    @PostMapping
+    @Operation(summary = "Crear nuevo proyecto",
+               description = "Crea un nuevo proyecto asignado al usuario autenticado. Solo roles ADMIN o CREATOR pueden crear proyectos.")
+    @ApiResponse(responseCode = "200", description = "Proyecto creado exitosamente",
+                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
+    @ApiResponse(responseCode = "400", description = "Error en los datos enviados")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
+    @PostMapping
     public ResponseEntity<?> crear(@RequestBody Project project, Authentication authentication) {
         String username = authentication.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
@@ -55,9 +74,14 @@ public class ProjectController {
         return ResponseEntity.ok(creado);
     }
 
-    // Actualizar proyecto (solo ADMIN o CREATOR y dueño)
-    @PutMapping("/{id}")
+    @Operation(summary = "Actualizar proyecto",
+               description = "Actualiza un proyecto existente. Solo roles ADMIN o CREATOR que sean dueños pueden actualizar.")
+    @ApiResponse(responseCode = "200", description = "Proyecto actualizado exitosamente",
+                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
+    @ApiResponse(responseCode = "403", description = "No autorizado para actualizar este proyecto")
+    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
+    @PutMapping("/{id}")
     public ResponseEntity<Project> actualizar(@PathVariable Long id,
                                               @RequestBody Project project,
                                               Authentication authentication) {
@@ -69,7 +93,6 @@ public class ProjectController {
 
         String username = authentication.getName();
 
-        // Validar que sea dueño para actualizar
         if (!proyectoExistente.getOwner().getUsername().trim().equalsIgnoreCase(username.trim())) {
             return ResponseEntity.status(403).build();
         }
@@ -82,9 +105,13 @@ public class ProjectController {
         return ResponseEntity.ok(actualizado);
     }
 
-    // Eliminar proyecto (solo ADMIN o CREATOR y dueño)
-    @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar proyecto",
+               description = "Elimina un proyecto existente. Solo roles ADMIN o CREATOR que sean dueños pueden eliminar.")
+    @ApiResponse(responseCode = "200", description = "Proyecto eliminado exitosamente")
+    @ApiResponse(responseCode = "403", description = "No autorizado para eliminar este proyecto")
+    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {

@@ -30,35 +30,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        String jwt = null;
-        String username = null;
+protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
+    final String authHeader = request.getHeader("Authorization");
+    String jwt = null;
+    String username = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7);  // Extrae el JWT del encabezado
-            username = jwtUtils.getUserNameFromJwtToken(jwt);  // Obtén el username del JWT
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        jwt = authHeader.substring(7);
+
+        try {
+            username = jwtUtils.getUserNameFromJwtToken(jwt);
+        } catch (Exception e) {
+            logger.error("Error al obtener username del JWT: " + e.getMessage());
         }
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            
-            // Extraemos los roles del token
-            String roles = jwtUtils.getRolesFromJwtToken(jwt);
-
-            // Convertimos los roles a SimpleGrantedAuthority
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                    .map(role -> new SimpleGrantedAuthority(role.trim()))
-                    .collect(Collectors.toList());
-
-            if (jwtUtils.validateJwtToken(jwt)) {
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, authorities);  // Asignamos las autoridades extraídas
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
-        }
-
-        filterChain.doFilter(request, response);
     }
-}
+
+    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        String roles = jwtUtils.getRolesFromJwtToken(jwt);
+        List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
+                .map(String::trim)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
+        if (jwtUtils.validateJwtToken(jwt)) {
+            UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+    }
+
+    filterChain.doFilter(request, response);
+}}
