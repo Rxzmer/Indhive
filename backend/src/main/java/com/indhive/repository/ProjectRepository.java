@@ -9,8 +9,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
-    @EntityGraph(attributePaths = { "collaborators" })
+
+    @EntityGraph(attributePaths = { "owner", "collaborators" })
     @org.springframework.lang.NonNull
     List<Project> findAll();
+
 }
 

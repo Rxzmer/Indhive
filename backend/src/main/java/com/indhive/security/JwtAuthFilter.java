@@ -30,37 +30,43 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private CustomUserDetailsService userDetailsService;
 
     @Override
-protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
-    final String authHeader = request.getHeader("Authorization");
-    String jwt = null;
-    String username = null;
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
+                                    throws ServletException, IOException {
+        final String authHeader = request.getHeader("Authorization");
+        String jwt = null;
+        String username = null;
 
-    if (authHeader != null && authHeader.startsWith("Bearer ")) {
-        jwt = authHeader.substring(7);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
 
-        try {
-            username = jwtUtils.getUserNameFromJwtToken(jwt);
-        } catch (Exception e) {
-            logger.error("Error al obtener username del JWT: " + e.getMessage());
+            if (jwtUtils.validateJwtToken(jwt)) {
+                try {
+                    username = jwtUtils.getUserNameFromJwtToken(jwt);
+                } catch (Exception e) {
+                    logger.error("Error al obtener username del JWT: " + e.getMessage());
+                }
+            }
         }
-    }
 
-    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        String roles = jwtUtils.getRolesFromJwtToken(jwt);
-        List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                .map(String::trim)
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+            String roles = jwtUtils.getRolesFromJwtToken(jwt);
+            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
+                    .map(String::trim)
+                    // Asegurar prefijo ROLE_ para cada autoridad
+                    .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
 
-        if (jwtUtils.validateJwtToken(jwt)) {
             UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
-    }
 
-    filterChain.doFilter(request, response);
-}}
+        filterChain.doFilter(request, response);
+    }
+}
