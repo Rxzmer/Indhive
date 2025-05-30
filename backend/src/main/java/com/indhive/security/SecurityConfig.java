@@ -27,7 +27,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthEntryPoint customAuthEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
-    private final LoginAttemptService loginAttemptService;
+    //private final LoginAttemptService loginAttemptService; rxzmer: desactivado temporalmente
 
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
@@ -39,7 +39,7 @@ public class SecurityConfig {
         this.userDetailsService = userDetailsService;
         this.customAuthEntryPoint = customAuthEntryPoint;
         this.customAccessDeniedHandler = customAccessDeniedHandler;
-        this.loginAttemptService = loginAttemptService;
+        //this.loginAttemptService = loginAttemptService; rxzmer: desactivado temporalmente
     }
 
     @Bean
