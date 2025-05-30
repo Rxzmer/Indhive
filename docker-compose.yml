@@ -15,6 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -30,16 +31,18 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
     container_name: react_app
     environment:
-      REACT_APP_API_URL: http://localhost:8080
+      REACT_APP_API_URL: http://spring_app:8080
     ports:
-      - "3000:3000"
+      - "3000:80"  # Asumiendo que usas NGINX. Si no, vuelve a 3000:3000
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:
