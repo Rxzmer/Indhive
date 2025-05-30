@@ -89,14 +89,14 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(username, password));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            loginAttemptService.loginSucceeded(username); // Limpia intentos
+            loginAttemptService.loginSucceeded(username);
 
             User user = userRepository.findByUsername(username).orElseThrow();
             String token = jwtUtils.generateJwtToken(user.getUsername(), user.getRoles());
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
-            loginAttemptService.loginFailed(username); // Incrementa intentos
+            loginAttemptService.loginFailed(username);
             return ResponseEntity.status(401).body("Error: Credenciales inválidas");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error interno: " + e.getMessage());

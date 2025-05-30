@@ -60,8 +60,8 @@ public class ProjectController {
     @ApiResponse(responseCode = "200", description = "Proyecto creado exitosamente",
                  content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
     @ApiResponse(responseCode = "400", description = "Error en los datos enviados")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<?> crear(@RequestBody Project project, Authentication authentication) {
         String username = authentication.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
@@ -80,8 +80,8 @@ public class ProjectController {
                  content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
     @ApiResponse(responseCode = "403", description = "No autorizado para actualizar este proyecto")
     @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<Project> actualizar(@PathVariable Long id,
                                               @RequestBody Project project,
                                               Authentication authentication) {
@@ -110,8 +110,8 @@ public class ProjectController {
     @ApiResponse(responseCode = "200", description = "Proyecto eliminado exitosamente")
     @ApiResponse(responseCode = "403", description = "No autorizado para eliminar este proyecto")
     @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
         if (proyectoOpt.isEmpty()) {

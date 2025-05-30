@@ -1,6 +1,5 @@
 package com.indhive.security;
 
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,7 +11,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -29,21 +27,19 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthEntryPoint customAuthEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
-private final LoginAttemptService loginAttemptService;
+    private final LoginAttemptService loginAttemptService;
 
-    
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
             CustomUserDetailsService userDetailsService,
             CustomAuthEntryPoint customAuthEntryPoint,
             CustomAccessDeniedHandler customAccessDeniedHandler,
             LoginAttemptService loginAttemptService) {
-
-        this.loginAttemptService = loginAttemptService;        
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.customAuthEntryPoint = customAuthEntryPoint;
         this.customAccessDeniedHandler = customAccessDeniedHandler;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @Bean

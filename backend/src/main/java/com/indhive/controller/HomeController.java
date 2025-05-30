@@ -17,6 +17,8 @@ public class HomeController {
                description = "Devuelve un mensaje básico para verificar que el backend está corriendo")
     @GetMapping
     public ResponseEntity<String> home() {
+        // Punto de entrada básico para verificar que el backend está corriendo
+        // Retorna un mensaje de bienvenida con status HTTP 200 OK
         return ResponseEntity.ok("Bienvenido a Indhive Backend");
     }
 }

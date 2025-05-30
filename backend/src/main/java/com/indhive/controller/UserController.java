@@ -2,6 +2,7 @@ package com.indhive.controller;
 
 import com.indhive.model.User;
 import com.indhive.service.UserService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,7 +52,7 @@ public class UserController {
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
         return userOpt.map(user -> {
-                    user.setPassword(null);
+                    user.setPassword(null);  // No devolver la contraseña
                     return ResponseEntity.ok(user);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -66,10 +67,10 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> crear(@RequestBody User usuario) {
         if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
-            usuario.setRoles("ROLE_USER");
+            usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
         }
         User savedUser = userService.guardarUsuario(usuario);
-        savedUser.setPassword(null);
+        savedUser.setPassword(null);  // No devolver el password cifrado
         return ResponseEntity.ok(savedUser);
     }
 
@@ -87,9 +88,11 @@ public class UserController {
                     u.setUsername(usuario.getUsername());
                     u.setEmail(usuario.getEmail());
                     u.setRoles(usuario.getRoles());
+
                     if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
                         u.setPassword(passwordEncoder.encode(usuario.getPassword()));
                     }
+
                     User updated = userService.guardarUsuario(u);
                     updated.setPassword(null);
                     return ResponseEntity.ok(updated);
@@ -100,8 +103,8 @@ public class UserController {
                description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
     @ApiResponse(responseCode = "200", description = "Usuario eliminado correctamente")
     @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         if (userService.obtenerUsuarioPorId(id).isPresent()) {
             userService.eliminarUsuario(id);

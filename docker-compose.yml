@@ -39,7 +39,7 @@ services:
     environment:
       REACT_APP_API_URL: http://spring_app:8080
     ports:
-      - "3000:80"  # Asumiendo que usas NGINX. Si no, vuelve a 3000:3000
+      - "3000:80"  
     depends_on:
       - backend
     restart: unless-stopped

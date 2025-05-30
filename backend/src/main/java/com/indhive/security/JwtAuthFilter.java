@@ -5,20 +5,20 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.indhive.repository.RevokedTokenRepository;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import com.indhive.repository.RevokedTokenRepository;
-
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,19 +31,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     @Autowired
-    private RevokedTokenRepository revokedTokenRepository;
-
-    @Autowired
     private JwtUtils jwtUtils;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
+    @Autowired
+    private RevokedTokenRepository revokedTokenRepository;
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
-                                    throws ServletException, IOException {
+            throws ServletException, IOException {
+
         final String authHeader = request.getHeader("Authorization");
         String jwt = null;
         String username = null;
@@ -67,12 +68,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             logger.debug("No se recibió Authorization o no es Bearer");
         }
 
+        // Verificación de token revocado
         if (jwt != null && revokedTokenRepository.existsById(jwt)) {
-            logger.warn("Token revocado");
+            logger.warn("Token revocado, se ignora autenticación");
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Autenticación si no está ya autenticado y tenemos un usuario válido
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             logger.debug("Cargando usuario desde base de datos...");
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

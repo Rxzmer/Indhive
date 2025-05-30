@@ -12,8 +12,8 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 @Entity
 @Table(name = "usuarios")
 @JsonIdentityInfo(
-  generator = ObjectIdGenerators.PropertyGenerator.class,
-  property = "id"
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "id"
 )
 public class User {
 
@@ -25,13 +25,16 @@ public class User {
 
     private String email;
 
+    // Almacena roles como una cadena separada por comas
     private String roles = "ROLE_USER";
 
     private String password;
 
+    // Relación One-to-Many: el usuario es dueño de estos proyectos
     @OneToMany(mappedBy = "owner", fetch = FetchType.EAGER)
     private Set<Project> ownedProjects = new HashSet<>();
 
+    // Relación Many-to-Many: el usuario colabora en estos proyectos
     @ManyToMany(mappedBy = "collaborators", fetch = FetchType.EAGER)
     private Set<Project> collaboratedProjects = new HashSet<>();
 
@@ -44,34 +47,67 @@ public class User {
         this.password = password;
     }
 
-    // Getters y setters
+    // Getters y Setters
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getUsername() {
+        return username;
+    }
 
-    public String getRoles() { return roles; }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getRoles() {
+        return roles;
+    }
+
     public void setRoles(String roles) {
         if (roles != null) {
             this.roles = Arrays.stream(roles.split(","))
-                .map(r -> r.trim().startsWith("ROLE_") ? r.trim() : "ROLE_" + r.trim())
+                .map(role -> role.trim().startsWith("ROLE_") ? role.trim() : "ROLE_" + role.trim())
                 .collect(Collectors.joining(","));
         } else {
             this.roles = null;
         }
     }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public String getPassword() {
+        return password;
+    }
 
-    public Set<Project> getOwnedProjects() { return ownedProjects; }
-    public void setOwnedProjects(Set<Project> ownedProjects) { this.ownedProjects = ownedProjects; }
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-    public Set<Project> getCollaboratedProjects() { return collaboratedProjects; }
-    public void setCollaboratedProjects(Set<Project> collaboratedProjects) { this.collaboratedProjects = collaboratedProjects; }
+    public Set<Project> getOwnedProjects() {
+        return ownedProjects;
+    }
+
+    public void setOwnedProjects(Set<Project> ownedProjects) {
+        this.ownedProjects = ownedProjects;
+    }
+
+    public Set<Project> getCollaboratedProjects() {
+        return collaboratedProjects;
+    }
+
+    public void setCollaboratedProjects(Set<Project> collaboratedProjects) {
+        this.collaboratedProjects = collaboratedProjects;
+    }
 }
