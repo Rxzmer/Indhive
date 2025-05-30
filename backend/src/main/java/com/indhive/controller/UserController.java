@@ -2,6 +2,13 @@ package com.indhive.controller;
 
 import com.indhive.model.User;
 import com.indhive.service.UserService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +22,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "Usuarios", description = "Gestión de usuarios del sistema")
 public class UserController {
 
     @Autowired
@@ -22,15 +30,24 @@ public class UserController {
     
     @Autowired
     private PasswordEncoder passwordEncoder;
- 
-    // Obtener todos los usuarios - Solo ADMIN puede acceder
-    @GetMapping
+
+    @Operation(summary = "Listar todos los usuarios",
+               description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Lista de usuarios",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
     public List<User> listar() {
         return userService.listarUsuarios();
     }
 
-    // Obtener usuario por id - cualquier usuario autenticado puede ver
+    @Operation(summary = "Obtener usuario por ID",
+               description = "Devuelve la información de un usuario específico, excluyendo la contraseña. Accesible para cualquier usuario autenticado.")
+    @ApiResponse(responseCode = "200", description = "Usuario encontrado",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = User.class)))
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @GetMapping("/{id}")
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
@@ -41,9 +58,13 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Crear nuevo usuario - solo ADMIN puede crear usuarios
-    @PostMapping
+    @Operation(summary = "Crear un nuevo usuario",
+               description = "Permite crear un nuevo usuario. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Usuario creado correctamente",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
     public ResponseEntity<User> crear(@RequestBody User usuario) {
         if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
             usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
@@ -53,26 +74,35 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    // Actualizar usuario - solo ADMIN puede actualizar
-    @PutMapping("/{id}")
+    @Operation(summary = "Actualizar un usuario existente",
+               description = "Actualiza la información de un usuario. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = User.class)))
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
     public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
         return userService.obtenerUsuarioPorId(id)
                 .map(u -> {
                     u.setUsername(usuario.getUsername());
                     u.setEmail(usuario.getEmail());
                     u.setRoles(usuario.getRoles());
-                    // Si la contraseña se actualiza, cifrarla
+
                     if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
                         u.setPassword(passwordEncoder.encode(usuario.getPassword()));
                     }
+
                     User updated = userService.guardarUsuario(u);
                     updated.setPassword(null);
                     return ResponseEntity.ok(updated);
                 }).orElse(ResponseEntity.notFound().build());
     }
 
-    // Eliminar usuario por id - solo ADMIN
+    @Operation(summary = "Eliminar un usuario",
+               description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Usuario eliminado correctamente")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
@@ -83,7 +113,10 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
-    // Listar proyectos de un usuario - cualquier usuario autenticado puede ver
+    @Operation(summary = "Listar proyectos de un usuario",
+               description = "Devuelve los proyectos que un usuario posee y en los que colabora. Accesible para cualquier usuario autenticado.")
+    @ApiResponse(responseCode = "200", description = "Proyectos obtenidos correctamente")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @GetMapping("/{id}/projects")
     public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);

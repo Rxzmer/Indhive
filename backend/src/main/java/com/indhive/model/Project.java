@@ -6,14 +6,18 @@ import jakarta.validation.constraints.NotBlank;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "proyectos")
+@JsonIdentityInfo(
+  generator = ObjectIdGenerators.PropertyGenerator.class,
+  property = "id"
+)
 public class Project {
 
     @Id
@@ -33,20 +37,15 @@ public class Project {
         referencedColumnName = "id",
         foreignKey = @ForeignKey(name = "fk_project_owner")
     )
-    @OnDelete(action = OnDeleteAction.CASCADE)  // <-- Aquí está el cambio importante
-    @JsonBackReference
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User owner;
 
     // Relación Many-to-Many con usuarios colaboradores del proyecto
     @ManyToMany
-    @JsonIgnore
     @JoinTable(
         name = "project_collaborators",
         joinColumns = @JoinColumn(name = "project_id"),
-        inverseJoinColumns = @JoinColumn(
-            name = "user_id",
-            referencedColumnName = "id"
-        ),
+        inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
         foreignKey = @ForeignKey(name = "fk_project_collaborators_project"),
         inverseForeignKey = @ForeignKey(name = "fk_project_collaborators_user")
     )
@@ -61,45 +60,24 @@ public class Project {
         this.owner = owner;
     }
 
-    // Getters y setters (sin cambios)
+    // Getters y Setters
+    public Long getId() { return id; }
 
-    public Long getId() {
-        return id;
-    }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getTitle() { return title; }
 
-    public String getTitle() {
-        return title;
-    }
+    public void setTitle(String title) { this.title = title; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public String getDescription() { return description; }
 
-    public String getDescription() {
-        return description;
-    }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public User getOwner() { return owner; }
 
-    public User getOwner() {
-        return owner;
-    }
+    public void setOwner(User owner) { this.owner = owner; }
 
-    public void setOwner(User owner) {
-        this.owner = owner;
-    }
+    public Set<User> getCollaborators() { return collaborators; }
 
-    public Set<User> getCollaborators() {
-        return collaborators;
-    }
-
-    public void setCollaborators(Set<User> collaborators) {
-        this.collaborators = collaborators;
-    }
+    public void setCollaborators(Set<User> collaborators) { this.collaborators = collaborators; }
 }
