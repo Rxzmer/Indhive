@@ -77,26 +77,32 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
-        String username = loginRequest.getUsername();
+        String inputEmail = loginRequest.getEmail(); // campo usado en frontend
         String password = loginRequest.getPassword();
 
-        if (loginAttemptService.isBlocked(username)) {
+        if (loginAttemptService.isBlocked(inputEmail)) {
             return ResponseEntity.status(429).body("Demasiados intentos fallidos. Intenta más tarde.");
         }
 
         try {
+            // Buscar al usuario por email
+            Optional<User> userOpt = userRepository.findByEmail(inputEmail);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(401).body("Usuario no encontrado");
+            }
+
+            String username = userOpt.get().getUsername();
+
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
             SecurityContextHolder.getContext().setAuthentication(auth);
+            loginAttemptService.loginSucceeded(inputEmail);
 
-            loginAttemptService.loginSucceeded(username);
-
-            User user = userRepository.findByUsername(username).orElseThrow();
-            String token = jwtUtils.generateJwtToken(user.getUsername(), user.getRoles());
+            String token = jwtUtils.generateJwtToken(username, userOpt.get().getRoles());
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
-            loginAttemptService.loginFailed(username);
+            loginAttemptService.loginFailed(inputEmail);
             return ResponseEntity.status(401).body("Error: Credenciales inválidas");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error interno: " + e.getMessage());

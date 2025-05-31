@@ -1,0 +1,139 @@
+/* Estilos register css */
+
+* {
+  box-sizing: border-box;
+}
+
+.register-card {
+  background-color: rgba(27, 31, 39, 0.6); /* semi-transparente */
+  backdrop-filter: blur(10px); /* desenfoque de fondo */
+  -webkit-backdrop-filter: blur(10px); /* soporte para Safari */
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  color: white;
+  position: relative;
+}
+
+
+.register-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  z-index: 0;
+}
+
+.register-background {
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.4);
+  z-index: -1;
+}
+
+.register-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  font-size: 1.2rem;
+  color: #fff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.register-close:hover {
+  transform: scale(1.2);
+}
+
+.register-title {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.register-input {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background-color: #2b2f36;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.register-button {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  background-color: #fff;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.register-button:hover {
+  background-color: #ddd;
+}
+
+
+@media (max-width: 768px) {
+  .landing-columns {
+    flex-direction: column;
+    padding: 2rem;
+    align-items: center;
+  }
+
+  .landing-left {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-logo {
+    max-width: 80%;
+  }
+
+  .landing-paragraph {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+
+  .register-card {
+    width: 90%;
+    padding: 1.5rem;
+  }
+
+  .register-title {
+    font-size: 1.2rem;
+  }
+
+  .register-input,
+  .register-button {
+    font-size: 0.95rem;
+  }
+
+  .slogan-type {
+    font-size: 1.3rem;
+  }
+}

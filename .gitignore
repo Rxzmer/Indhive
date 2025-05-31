@@ -12,6 +12,9 @@ npm-debug.log*
 
 /backend/target
 
+# PostgreSQL volume data
+pgdata/
+
 # IDE
 .idea/
 *.iml
