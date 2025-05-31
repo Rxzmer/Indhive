@@ -1,5 +1,5 @@
-# Etapa de construcción
-FROM maven:3.9.4-eclipse-temurin-17 AS builder
+# Etapa de construcción con Java 17
+FROM maven:3.9.4-eclipse-temurin-17-alpine AS builder
 WORKDIR /app
 
 COPY pom.xml .
@@ -7,14 +7,13 @@ COPY src ./src
 
 RUN mvn clean package -DskipTests
 
-# Etapa de ejecución
+# Etapa de ejecución con JRE 17
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 COPY --from=builder /app/target/*.jar app.jar
-RUN chmod +x app.jar
-
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75"
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]
+
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75"
+ENTRYPOINT exec java $JAVA_OPTS -jar app.jar

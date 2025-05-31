@@ -1,31 +1,34 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:13
     container_name: db
     environment:
-      POSTGRES_DB: indihive_db
-      POSTGRES_USER: indihive_user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U indihive_user -d indihive_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: spring_app
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/indihive_db  
-      SPRING_DATASOURCE_USERNAME: indihive_user
-      SPRING_DATASOURCE_PASSWORD: password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: create
-      JWT_SECRET: una_clave_super_segura_y_larga_que_deberias_cambiar_mas_de_32_bytes
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
@@ -34,12 +37,15 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     container_name: react_app
     environment:
-      REACT_APP_API_URL: http://spring_app:8080
+      REACT_APP_API_URL: ${REACT_APP_API_URL}
+      NODE_ENV: ${NODE_ENV}
+      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING}
     ports:
-      - "3000:80"  
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
