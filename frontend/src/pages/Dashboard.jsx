@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import background from '../assets/background.jpg';
-import './Register.css'; // Reutilizamos los estilos de login/register
+import './Register.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const Dashboard = () => {
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('token');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+        const apiUrl = process.env.REACT_APP_API_URL;
 
         const response = await fetch(`${apiUrl}/api/auth/me`, {
           headers: {
@@ -40,6 +40,15 @@ const Dashboard = () => {
     navigate('/');
   };
 
+  const getAvatar = (username) => {
+    const initials = username.slice(0, 2).toUpperCase();
+    return (
+      <div className="avatar-circle">
+        <span>{initials}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="register-container">
       <div
@@ -47,15 +56,21 @@ const Dashboard = () => {
         style={{ backgroundImage: `url(${background})` }}
       />
 
-      <div className="register-card">
+      <div className="register-card" style={{ textAlign: 'center' }}>
         <button className="register-close" onClick={handleLogout}>✕</button>
-        <h2 className="register-title">Bienvenido a Indhive</h2>
+        <h2 className="register-title">Mi Perfil</h2>
 
         {user && user.username ? (
           <>
-            <p className="dashboard-info">Usuario: <strong>{user.username}</strong></p>
-            <p className="dashboard-info">Correo: {user.email}</p>
+            {getAvatar(user.username)}
+            <h3 className="dashboard-info"><strong>{user.username}</strong></h3>
+            <p className="dashboard-info">{user.email}</p>
             <p className="dashboard-info">Rol: {user.roles}</p>
+
+            <div className="dashboard-actions">
+              <Link to="/projects" className="register-button">Ver Proyectos</Link>
+              <Link to="/projects/new" className="register-button">Crear Proyecto</Link>
+            </div>
           </>
         ) : error ? (
           <p className="register-error">{error}</p>
