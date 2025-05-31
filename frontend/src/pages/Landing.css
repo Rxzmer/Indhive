@@ -1,4 +1,9 @@
-/* Fondo general */
+/* estilo fondo general */
+
+* {
+  box-sizing: border-box;
+}
+
 .landing-container {
   position: fixed;
   top: 0;
@@ -127,6 +132,16 @@
   animation: blink-square 0.7s steps(1) infinite;
 }
 
+.highlight-link {
+  color: white;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.highlight-link:hover {
+  color: var(--primary-color, #2e96b6);
+}
+
 
 
 /* Animación escritura */
@@ -139,4 +154,45 @@
 @keyframes blink-square {
   0%, 100% { opacity: 0; }
   50% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .landing-columns {
+    flex-direction: column;
+    padding: 2rem;
+    align-items: center;
+  }
+
+  .landing-left {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-logo {
+    max-width: 80%;
+  }
+
+  .landing-paragraph {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+
+  .register-card {
+    width: 90%;
+    padding: 1.5rem;
+  }
+
+  .register-title {
+    font-size: 1.2rem;
+  }
+
+  .register-input,
+  .register-button {
+    font-size: 0.95rem;
+  }
+
+  .slogan-type {
+    font-size: 1.3rem;
+  }
 }

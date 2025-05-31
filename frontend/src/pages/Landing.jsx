@@ -1,6 +1,7 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/LogoInd.png';
-import background from '../assets/background.jpg';
+import './Landing.css';
 
 const Landing = () => {
   return (
@@ -19,18 +20,13 @@ const Landing = () => {
 
           <p className="landing-paragraph">
             ¿Eres un desarrollador indie que busca artistas gráficos, músicos, productores, guionistas o actores de voz para ese videojuego que tanto trabajo y esfuerzo te está costando?
-          </p>
-
-          <p className="landing-paragraph">
             ¿O tal vez eres un creativo sin experiencia que está deseando comenzar en el cada vez más creciente mundo de los videojuegos?
-          </p>
-
-          <p className="landing-paragraph">
             Indhive nace con la misión de daros a conocer entre vosotros y facilitar la comunicación teniendo un lugar donde conectaros fácilmente para que podáis tener vuestra primera oportunidad.
           </p>
 
           <p className="landing-paragraph">
-            No tener experiencia es un requisito fundamental en Indhive. ¿A qué esperas? Crea tu cuenta <strong>ahora</strong>.
+            No tener experiencia es un requisito fundamental en Indhive. ¿A qué esperas? Crea tu cuenta{' '}
+            <Link to="/register" className="highlight-link">ahora</Link>.
           </p>
         </div>
 

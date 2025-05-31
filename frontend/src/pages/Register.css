@@ -1,3 +1,9 @@
+/* Estilos register css */
+
+* {
+  box-sizing: border-box;
+}
+
 .register-card {
   background-color: rgba(27, 31, 39, 0.6); /* semi-transparente */
   backdrop-filter: blur(10px); /* desenfoque de fondo */
@@ -34,14 +40,10 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: brightness(0.9);
+  filter: brightness(0.4);
   z-index: -1;
 }
 
-
-
-
-/* Botón X */
 .register-close {
   position: absolute;
   top: 0.8rem;
@@ -92,4 +94,46 @@
 
 .register-button:hover {
   background-color: #ddd;
+}
+
+
+@media (max-width: 768px) {
+  .landing-columns {
+    flex-direction: column;
+    padding: 2rem;
+    align-items: center;
+  }
+
+  .landing-left {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-logo {
+    max-width: 80%;
+  }
+
+  .landing-paragraph {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+
+  .register-card {
+    width: 90%;
+    padding: 1.5rem;
+  }
+
+  .register-title {
+    font-size: 1.2rem;
+  }
+
+  .register-input,
+  .register-button {
+    font-size: 0.95rem;
+  }
+
+  .slogan-type {
+    font-size: 1.3rem;
+  }
 }

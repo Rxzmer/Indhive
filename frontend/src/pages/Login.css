@@ -1,9 +1,49 @@
+/* estilo login.css */
+
+* {
+  box-sizing: border-box;
+}
+
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  color: white;
+  z-index: 0;
+}
+
+.login-background {
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.4);
+  z-index: -1;
+}
+
+.login-card {
+  background-color: rgba(27, 31, 39, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  color: white;
+  position: relative;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
   margin-top: 2rem;
-  width: 100%;
-  max-width: 400px;
 }
 
 .login-input {
@@ -36,3 +76,61 @@
   margin-top: 1rem;
   font-size: 0.9rem;
 }
+
+.login-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  font-size: 1.2rem;
+  color: #fff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.login-close:hover {
+  transform: scale(1.2);
+}
+
+@media (max-width: 768px) {
+  .landing-columns {
+    flex-direction: column;
+    padding: 2rem;
+    align-items: center;
+  }
+
+  .landing-left {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-logo {
+    max-width: 80%;
+  }
+
+  .landing-paragraph {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+
+  .register-card {
+    width: 90%;
+    padding: 1.5rem;
+  }
+
+  .register-title {
+    font-size: 1.2rem;
+  }
+
+  .register-input,
+  .register-button {
+    font-size: 0.95rem;
+  }
+
+  .slogan-type {
+    font-size: 1.3rem;
+  }
+}
+

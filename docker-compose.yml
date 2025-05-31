@@ -40,10 +40,6 @@ services:
     build:
       context: ./frontend
     container_name: react_app
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL}
-      NODE_ENV: ${NODE_ENV}
-      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING}
     ports:
       - "3000:80"
     depends_on:
