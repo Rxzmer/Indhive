@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import background from '../assets/background.jpg';
 import './Register.css'; // Reutilizamos el CSS de registro
@@ -7,7 +7,14 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+
+  // Cargar email guardado si existe
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('savedEmail');
+    if (savedEmail) setEmail(savedEmail);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +35,14 @@ const Login = () => {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+
+      // Guardar email si el checkbox está marcado
+      if (rememberMe) {
+        localStorage.setItem('savedEmail', email);
+      } else {
+        localStorage.removeItem('savedEmail');
+      }
+
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -45,6 +60,14 @@ const Login = () => {
         <button className="register-close" onClick={() => navigate('/')}>✕</button>
         <h2 className="register-title">Inicia Sesión</h2>
         <form className="register-form" onSubmit={handleSubmit}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Recordarme
+          </label>
           <input
             type="email"
             placeholder="Correo electrónico"

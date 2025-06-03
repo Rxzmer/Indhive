@@ -21,7 +21,7 @@ const Landing = () => {
           <p className="landing-paragraph">
             ¿Eres un desarrollador indie que busca artistas gráficos, músicos, productores, guionistas o actores de voz para ese videojuego que tanto trabajo y esfuerzo te está costando?
             ¿O tal vez eres un creativo sin experiencia que está deseando comenzar en el cada vez más creciente mundo de los videojuegos?
-            Indhive nace con la misión de daros a conocer entre vosotros y facilitar la comunicación teniendo un lugar donde conectaros fácilmente para que podáis tener vuestra primera oportunidad.
+            INDHive nace con la misión de daros a conocer entre vosotros y facilitar la comunicación teniendo un lugar donde conectaros fácilmente para que podáis tener vuestra primera oportunidad.
           </p>
 
           <p className="landing-paragraph">
