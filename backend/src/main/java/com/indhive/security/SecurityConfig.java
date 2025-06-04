@@ -27,32 +27,17 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthEntryPoint customAuthEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
-    //private final LoginAttemptService loginAttemptService; rxzmer: desactivado temporalmente
 
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
             CustomUserDetailsService userDetailsService,
             CustomAuthEntryPoint customAuthEntryPoint,
-            CustomAccessDeniedHandler customAccessDeniedHandler,
-            LoginAttemptService loginAttemptService) {
+            CustomAccessDeniedHandler customAccessDeniedHandler
+    ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.customAuthEntryPoint = customAuthEntryPoint;
         this.customAccessDeniedHandler = customAccessDeniedHandler;
-        //this.loginAttemptService = loginAttemptService; rxzmer: desactivado temporalmente
-    }
-
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
     }
 
     @Bean
@@ -61,14 +46,28 @@ public class SecurityConfig {
     }
 
     @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://indhive.com"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000", "https://indhive.com"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
@@ -78,14 +77,18 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/swagger-ui.html",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**")
-                .permitAll()
-                .anyRequest().authenticated())
-            .exceptionHandling(exception -> exception
+    .requestMatchers(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/recover",
+        "/api/auth/reset-password",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/v3/api-docs/**")
+    .permitAll()
+    .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(customAuthEntryPoint)
                 .accessDeniedHandler(customAccessDeniedHandler)
             )

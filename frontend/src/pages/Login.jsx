@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import background from '../assets/background.jpg';
+import { Link } from 'react-router-dom';
 import './Register.css'; // Reutilizamos el CSS de registro
 
 const Login = () => {
@@ -86,6 +87,10 @@ const Login = () => {
           />
           <button type="submit" className="register-button">Entrar</button>
           {error && <p className="register-error">{error}</p>}
+
+          <Link to="/recover-password" className="highlight-link" style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+            ¿Olvidaste tu contraseña?
+          </Link>
         </form>
       </div>
     </div>

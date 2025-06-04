@@ -24,6 +24,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.indhive.dto.ResetPasswordDTO;
 
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +56,22 @@ public class AuthController {
     @Operation(summary = "Registrar nuevo usuario", description = "Registra un usuario con username, email, password y roles. Devuelve el usuario creado sin la contraseña.")
     @ApiResponse(responseCode = "200", description = "Usuario registrado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @ApiResponse(responseCode = "400", description = "Username ya está en uso")
+    @PostMapping("/recover")
+    public ResponseEntity<?> recoverPassword(@RequestBody EmailDTO emailDTO) {
+        System.out.println(">> Solicitud recibida para recuperar: " + emailDTO.getEmail());
+
+        Optional<User> userOpt = userRepository.findByEmail(emailDTO.getEmail());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.ok("Si el correo está registrado, recibirás instrucciones.");
+        }
+
+        String token = jwtUtils.generateJwtToken(userOpt.get().getUsername(), userOpt.get().getRoles());
+
+        System.out.println("Enlace de recuperación: http://localhost:3000/reset-password?token=" + token);
+
+        return ResponseEntity.ok("Si el correo está registrado, recibirás instrucciones.");
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody @Valid User user) {
         if (userRepository.existsByUsername(user.getUsername())) {
@@ -70,6 +87,28 @@ public class AuthController {
         savedUser.setPassword(null);
 
         return ResponseEntity.ok(savedUser);
+    }
+
+    @Operation(summary = "Restablecer contraseña", description = "Cambia la contraseña de un usuario usando un token de recuperación.")
+    @ApiResponse(responseCode = "200", description = "Contraseña actualizada correctamente")
+    @ApiResponse(responseCode = "400", description = "Token inválido o expirado")
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto) {
+        try {
+            String username = jwtUtils.getUserNameFromJwtToken(dto.getToken());
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body("Usuario no encontrado");
+            }
+
+            User user = userOpt.get();
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            userRepository.save(user);
+
+            return ResponseEntity.ok("Contraseña actualizada correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Token inválido o expirado");
+        }
     }
 
     @Operation(summary = "Login de usuario", description = "Autentica usuario y genera un token JWT para acceder a recursos protegidos.")
