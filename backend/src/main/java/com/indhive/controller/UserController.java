@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.HashMap;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/users")
@@ -41,7 +42,7 @@ public class UserController {
     public List<User> listar() {
         return userService.listarUsuarios();
     }
-
+    
     @Operation(summary = "Obtener usuario por ID",
                description = "Devuelve la información de un usuario específico, excluyendo la contraseña. Accesible para cualquier usuario autenticado.")
     @ApiResponse(responseCode = "200", description = "Usuario encontrado",
@@ -131,4 +132,56 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
+@Operation(summary = "Cambiar mi contraseña", description = "Permite a un usuario autenticado actualizar su contraseña.")
+@ApiResponse(responseCode = "200", description = "Contraseña cambiada correctamente")
+@ApiResponse(responseCode = "400", description = "Contraseña inválida")
+@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+@PutMapping("/me/password")
+@PreAuthorize("isAuthenticated()")
+public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
+    System.out.println(" [DEBUG] Entrando a /me/password");
+    System.out.println(" Usuario autenticado: " + auth.getName());
+
+    String username = auth.getName();
+
+    Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
+    if (userOpt.isEmpty()) {
+        System.out.println("❌ Usuario no encontrado: " + username);
+        return ResponseEntity.status(404).body("Usuario no encontrado");
+    }
+
+    String nuevaPassword = body.get("password");
+    if (nuevaPassword == null || nuevaPassword.isBlank()) {
+        System.out.println("⚠️ Contraseña vacía.");
+        return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
+    }
+
+    User user = userOpt.get();
+    user.setPassword(passwordEncoder.encode(nuevaPassword));
+    userService.guardarUsuario(user);
+
+    System.out.println("✅ Contraseña actualizada para: " + username);
+    return ResponseEntity.ok("Contraseña actualizada correctamente");
+}
+
+@Operation(summary = "Actualizar mi perfil", description = "Permite a un usuario autenticado actualizar su nombre y correo.")
+@ApiResponse(responseCode = "200", description = "Perfil actualizado correctamente")
+@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+@PutMapping("/me")
+@PreAuthorize("isAuthenticated()")
+public ResponseEntity<?> actualizarMiPerfil(@RequestBody Map<String, String> datos, Authentication auth) {
+    String username = auth.getName();
+    Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
+
+    if (userOpt.isEmpty()) return ResponseEntity.status(404).body("Usuario no encontrado");
+
+    User user = userOpt.get();
+    user.setUsername(datos.get("username"));
+    user.setEmail(datos.get("email"));
+
+    userService.guardarUsuario(user);
+    return ResponseEntity.ok("Perfil actualizado");
+}
+
 }

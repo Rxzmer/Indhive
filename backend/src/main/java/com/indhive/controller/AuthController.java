@@ -6,6 +6,7 @@ import com.indhive.repository.UserRepository;
 import com.indhive.repository.RevokedTokenRepository;
 import com.indhive.security.JwtUtils;
 import com.indhive.security.LoginAttemptService;
+import com.indhive.dto.EmailDTO;
 import com.indhive.dto.LoginRequest;
 
 import jakarta.servlet.http.HttpServletRequest;

@@ -3,20 +3,25 @@ import './Register.css';
 import background from '../assets/background.jpg';
 import logo from '../assets/LogoInd.png';
 import { Link } from 'react-router-dom';
+import EditProfileModal from './EditProfileModal';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [showUsers, setShowUsers] = useState(false);
-  const [search, setSearch] = useState('');
-  const [userInfo, setUserInfo] = useState({ username: '', email: '' });
+  const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' }); 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState({ username: '', email: '', password: '' });
   const [searchUser, setSearchUser] = useState('');
+  const [anchorPosition, setAnchorPosition] = useState(null);
+
+  const isAdmin = userInfo.roles?.includes('ADMIN'); 
+
 
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetch(`${apiUrl}/api/projects`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -30,7 +35,7 @@ const Dashboard = () => {
     })
       .then((res) => res.json())
       .then(data => {
-        setUserInfo({ username: data.username, email: data.email, id: data.id });
+        setUserInfo({ username: data.username, email: data.email, id: data.id, roles: data.roles });
         setEditData({ username: data.username, email: data.email, password: '' });
       })
       .catch(console.error);
@@ -54,26 +59,62 @@ const Dashboard = () => {
     setUsers(users.filter((u) => u.id !== id));
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    const body = { ...editData };
-    if (!body.password) delete body.password;
+  const handleEditSubmit = async () => {
+    const body = {
+      username: editData.username,
+      email: editData.email,
+    };
 
-    await fetch(`${apiUrl}/api/users/${userInfo.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+    try {
+      await fetch(`${apiUrl}/api/users/${userInfo.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
 
-    setShowEditModal(false);
-    window.location.reload();
+      if (editData.password.trim()) {
+        const res = await fetch(`${apiUrl}/api/users/me/password`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ password: editData.password }),
+        });
+
+        const text = await res.text();
+
+        if (res.status === 401) {
+          alert("Tu sesión ha expirado. No se pudo cambiar la contraseña.");
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!res.ok) {
+          alert("Error al cambiar la contraseña: " + text);
+          return;
+        }
+
+        alert("Contraseña cambiada correctamente. Se cerrará tu sesión por seguridad.");
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+      }
+
+      setShowEditModal(false);
+      window.location.reload();
+
+    } catch (err) {
+      alert("Error inesperado: " + err.message);
+    }
   };
 
   const filteredProjects = projects.filter((p) =>
-    p.title.toLowerCase().includes(search.toLowerCase())
+    p.title.toLowerCase().includes(searchUser.toLowerCase())
   );
 
   const adminActions = [
@@ -119,7 +160,22 @@ const Dashboard = () => {
             {userInfo.username.charAt(0).toUpperCase()}
           </div>
 
-          <div onClick={() => setShowEditModal(true)} style={{ position: 'absolute', top: '1.2rem', right: '1.2rem', cursor: 'pointer', color: 'white', fontSize: '1.2rem' }} title="Editar perfil">
+          <div
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setAnchorPosition({ top: rect.top, left: rect.right });
+              setShowEditModal(true);
+            }}
+            style={{
+              position: 'absolute',
+              top: '1.2rem',
+              right: '1.2rem',
+              cursor: 'pointer',
+              color: 'white',
+              fontSize: '1.2rem'
+            }}
+            title="Editar perfil"
+          >
             ✎
           </div>
 
@@ -151,14 +207,20 @@ const Dashboard = () => {
 
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', color: 'white' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <img src={logo} alt="Indhive" style={{ height: '40px' }} />
+            <img src={logo} alt="Indhive" style={{ height: '100px' }} />
             <input
               type="text"
-              placeholder="Buscar usuario..."
+              placeholder="Buscar..."
               value={searchUser}
               onChange={(e) => setSearchUser(e.target.value)}
               className="register-input"
-              style={{ maxWidth: '250px' }}
+              style={{
+                maxWidth: '300px',
+                height: '32px',
+                padding: '4px 8px',
+                fontSize: '14px',
+                marginTop: '0.5rem'
+              }}
             />
           </div>
 
@@ -176,14 +238,14 @@ const Dashboard = () => {
           {showUsers && (
             <div style={{ marginTop: '2rem' }}>
               <h3>USUARIOS</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', backgroundColor: '#2c2f36', color: 'white' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', backgroundColor: '#2c2f36', color: 'white', textAlign: 'left' }}>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Acciones</th>
+                    <th style={{ padding: '0.5rem' }}>ID</th>
+                    <th style={{ padding: '0.5rem' }}>Usuario</th>
+                    <th style={{ padding: '0.5rem' }}>Email</th>
+                    <th style={{ padding: '0.5rem' }}>Rol</th>
+                    <th style={{ padding: '0.5rem' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,15 +253,15 @@ const Dashboard = () => {
                     .filter(u => u.username.toLowerCase().includes(searchUser.toLowerCase()) || u.email.toLowerCase().includes(searchUser.toLowerCase()))
                     .map((u) => (
                       <tr key={u.id}>
-                        <td>{u.id}</td>
-                        <td>{u.username}</td>
-                        <td>{u.email}</td>
-                        <td>{u.roles}</td>
-                        <td>
+                        <td style={{ padding: '0.5rem' }}>{u.id}</td>
+                        <td style={{ padding: '0.5rem' }}>{u.username}</td>
+                        <td style={{ padding: '0.5rem' }}>{u.email}</td>
+                        <td style={{ padding: '0.5rem' }}>{u.roles}</td>
+                        <td style={{ padding: '0.5rem' }}>
                           <button
                             onClick={() => handleDeleteUser(u.id)}
                             style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>
-                            🗑️
+                            Eliminar User
                           </button>
                         </td>
                       </tr>
@@ -212,20 +274,14 @@ const Dashboard = () => {
       </div>
 
       {showEditModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '400px' }}>
-            <h3>Editar Perfil</h3>
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" value={editData.username} onChange={(e) => setEditData({ ...editData, username: e.target.value })} placeholder="Nombre de usuario" required />
-              <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} placeholder="Correo electrónico" required />
-              <input type="password" value={editData.password} onChange={(e) => setEditData({ ...editData, password: e.target.value })} placeholder="Nueva contraseña (opcional)" />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button type="button" onClick={() => setShowEditModal(false)} style={{ background: '#ccc', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px' }}>Cancelar</button>
-                <button type="submit" style={{ background: '#238636', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px' }}>Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EditProfileModal
+          userInfo={userInfo}
+          editData={editData}
+          setEditData={setEditData}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleEditSubmit}
+          anchorPosition={anchorPosition}
+        />
       )}
     </div>
   );
