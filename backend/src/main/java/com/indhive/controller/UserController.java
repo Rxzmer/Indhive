@@ -28,58 +28,46 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Operation(summary = "Listar todos los usuarios",
-               description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Lista de usuarios",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = User.class)))
+    @Operation(summary = "Listar todos los usuarios", description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Lista de usuarios", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<User> listar() {
         return userService.listarUsuarios();
     }
-    
-    @Operation(summary = "Obtener usuario por ID",
-               description = "Devuelve la información de un usuario específico, excluyendo la contraseña. Accesible para cualquier usuario autenticado.")
-    @ApiResponse(responseCode = "200", description = "Usuario encontrado",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = User.class)))
+
+    @Operation(summary = "Obtener usuario por ID", description = "Devuelve la información de un usuario específico, excluyendo la contraseña. Accesible para cualquier usuario autenticado.")
+    @ApiResponse(responseCode = "200", description = "Usuario encontrado", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @GetMapping("/{id}")
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
         return userOpt.map(user -> {
-                    user.setPassword(null);  // No devolver la contraseña
-                    return ResponseEntity.ok(user);
-                })
+            user.setPassword(null); // No devolver la contraseña
+            return ResponseEntity.ok(user);
+        })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Crear un nuevo usuario",
-               description = "Permite crear un nuevo usuario. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Usuario creado correctamente",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = User.class)))
+    @Operation(summary = "Crear un nuevo usuario", description = "Permite crear un nuevo usuario. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Usuario creado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<User> crear(@RequestBody User usuario) {
         if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
-            usuario.setRoles("ROLE_USER");  // Valor por defecto si está vacío
+            usuario.setRoles("ROLE_USER"); // Valor por defecto si está vacío
         }
         User savedUser = userService.guardarUsuario(usuario);
-        savedUser.setPassword(null);  // No devolver el password cifrado
+        savedUser.setPassword(null); // No devolver el password cifrado
         return ResponseEntity.ok(savedUser);
     }
 
-    @Operation(summary = "Actualizar un usuario existente",
-               description = "Actualiza la información de un usuario. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = User.class)))
+    @Operation(summary = "Actualizar un usuario existente", description = "Actualiza la información de un usuario. Solo accesible para usuarios con rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
@@ -91,17 +79,16 @@ public class UserController {
                     u.setRoles(usuario.getRoles());
 
                     if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
-                        u.setPassword(passwordEncoder.encode(usuario.getPassword()));
+                        u.setPassword(usuario.getPassword()); // ✅ sin codificar aquí
                     }
 
-                    User updated = userService.guardarUsuario(u);
+                    User updated = userService.guardarUsuario(u); // ← codifica dentro del service
                     updated.setPassword(null);
                     return ResponseEntity.ok(updated);
                 }).orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Eliminar un usuario",
-               description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
+    @Operation(summary = "Eliminar un usuario", description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
     @ApiResponse(responseCode = "200", description = "Usuario eliminado correctamente")
     @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @DeleteMapping("/{id}")
@@ -114,8 +101,7 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
-    @Operation(summary = "Listar proyectos de un usuario",
-               description = "Devuelve los proyectos que un usuario posee y en los que colabora. Accesible para cualquier usuario autenticado.")
+    @Operation(summary = "Listar proyectos de un usuario", description = "Devuelve los proyectos que un usuario posee y en los que colabora. Accesible para cualquier usuario autenticado.")
     @ApiResponse(responseCode = "200", description = "Proyectos obtenidos correctamente")
     @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     @GetMapping("/{id}/projects")
@@ -133,55 +119,57 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-@Operation(summary = "Cambiar mi contraseña", description = "Permite a un usuario autenticado actualizar su contraseña.")
-@ApiResponse(responseCode = "200", description = "Contraseña cambiada correctamente")
-@ApiResponse(responseCode = "400", description = "Contraseña inválida")
-@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-@PutMapping("/me/password")
-@PreAuthorize("isAuthenticated()")
-public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
-    System.out.println(" [DEBUG] Entrando a /me/password");
-    System.out.println(" Usuario autenticado: " + auth.getName());
+    @Operation(summary = "Cambiar mi contraseña", description = "Permite a un usuario autenticado actualizar su contraseña.")
+    @ApiResponse(responseCode = "200", description = "Contraseña cambiada correctamente")
+    @ApiResponse(responseCode = "400", description = "Contraseña inválida")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    @PutMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
+        System.out.println(" [DEBUG] Entrando a /me/password");
+        System.out.println(" Usuario autenticado: " + auth.getName());
 
-    String username = auth.getName();
+        String email = auth.getName(); // ← nombre más claro ahora que es un email
 
-    Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
-    if (userOpt.isEmpty()) {
-        System.out.println("❌ Usuario no encontrado: " + username);
-        return ResponseEntity.status(404).body("Usuario no encontrado");
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
+        if (userOpt.isEmpty()) {
+            System.out.println("❌ Usuario no encontrado: " + email);
+            return ResponseEntity.status(404).body("Usuario no encontrado");
+        }
+
+        String nuevaPassword = body.get("password");
+        if (nuevaPassword == null || nuevaPassword.isBlank()) {
+            System.out.println("⚠️ Contraseña vacía.");
+            return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
+        }
+
+        User user = userOpt.get();
+        user.setPassword(nuevaPassword);
+        userService.guardarUsuario(user);
+
+        System.out.println("✅ Contraseña actualizada para: " + email);
+        return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 
-    String nuevaPassword = body.get("password");
-    if (nuevaPassword == null || nuevaPassword.isBlank()) {
-        System.out.println("⚠️ Contraseña vacía.");
-        return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
+    @Operation(summary = "Actualizar mi perfil", description = "Permite a un usuario autenticado actualizar su nombre y correo.")
+    @ApiResponse(responseCode = "200", description = "Perfil actualizado correctamente")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    @PutMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> actualizarMiPerfil(@RequestBody Map<String, String> datos, Authentication auth) {
+        String email = auth.getName(); // ✅ auth.getName() devuelve el email del usuario autenticado
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email); // ✅ busca por email
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuario no encontrado");
+        }
+
+        User user = userOpt.get();
+        user.setUsername(datos.get("username"));
+        user.setEmail(datos.get("email"));
+
+        userService.guardarUsuario(user);
+        return ResponseEntity.ok("Perfil actualizado");
     }
-
-    User user = userOpt.get();
-    user.setPassword(passwordEncoder.encode(nuevaPassword));
-    userService.guardarUsuario(user);
-
-    System.out.println("✅ Contraseña actualizada para: " + username);
-    return ResponseEntity.ok("Contraseña actualizada correctamente");
-}
-
-@Operation(summary = "Actualizar mi perfil", description = "Permite a un usuario autenticado actualizar su nombre y correo.")
-@ApiResponse(responseCode = "200", description = "Perfil actualizado correctamente")
-@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-@PutMapping("/me")
-@PreAuthorize("isAuthenticated()")
-public ResponseEntity<?> actualizarMiPerfil(@RequestBody Map<String, String> datos, Authentication auth) {
-    String username = auth.getName();
-    Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
-
-    if (userOpt.isEmpty()) return ResponseEntity.status(404).body("Usuario no encontrado");
-
-    User user = userOpt.get();
-    user.setUsername(datos.get("username"));
-    user.setEmail(datos.get("email"));
-
-    userService.guardarUsuario(user);
-    return ResponseEntity.ok("Perfil actualizado");
-}
 
 }

@@ -96,8 +96,8 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto) {
         try {
-            String username = jwtUtils.getUserNameFromJwtToken(dto.getToken());
-            Optional<User> userOpt = userRepository.findByUsername(username);
+            String email = jwtUtils.getUserNameFromJwtToken(dto.getToken());
+            Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body("Usuario no encontrado");
             }
@@ -117,34 +117,48 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
-        String inputEmail = loginRequest.getEmail(); // campo usado en frontend
+        String inputEmail = loginRequest.getEmail();
         String password = loginRequest.getPassword();
 
+        System.out.println(">> Intento de login");
+        System.out.println("Email recibido: " + inputEmail);
+        System.out.println("Password recibido: " + password);
+
         if (loginAttemptService.isBlocked(inputEmail)) {
+            System.out.println("Usuario bloqueado por demasiados intentos.");
             return ResponseEntity.status(429).body("Demasiados intentos fallidos. Intenta más tarde.");
         }
 
         try {
-            // Buscar al usuario por email
             Optional<User> userOpt = userRepository.findByEmail(inputEmail);
             if (userOpt.isEmpty()) {
+                System.out.println("No se encontró usuario con ese email.");
                 return ResponseEntity.status(401).body("Usuario no encontrado");
             }
 
-            String username = userOpt.get().getUsername();
+            User user = userOpt.get();
+            System.out.println("Usuario encontrado: " + user.getUsername());
+            System.out.println("Hash guardado en BBDD: " + user.getPassword());
+
+            boolean match = passwordEncoder.matches(password, user.getPassword());
+            System.out.println("¿La contraseña coincide? " + match);
 
             Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password));
+                    new UsernamePasswordAuthenticationToken(inputEmail, password));
             SecurityContextHolder.getContext().setAuthentication(auth);
             loginAttemptService.loginSucceeded(inputEmail);
 
-            String token = jwtUtils.generateJwtToken(username, userOpt.get().getRoles());
+            String token = jwtUtils.generateJwtToken(inputEmail, user.getRoles());
+
+            System.out.println("Login exitoso. Token generado.");
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
+            System.out.println("❌ Credenciales inválidas para: " + inputEmail);
             loginAttemptService.loginFailed(inputEmail);
             return ResponseEntity.status(401).body("Error: Credenciales inválidas");
         } catch (Exception e) {
+            System.out.println("⚠️ Error interno: " + e.getMessage());
             return ResponseEntity.status(500).body("Error interno: " + e.getMessage());
         }
     }
@@ -159,8 +173,9 @@ public class AuthController {
             return ResponseEntity.status(401).body("No autenticado");
         }
 
-        String username = auth.getName();
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        String email = auth.getName();
+Optional<User> userOpt = userRepository.findByEmail(email);
+
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }

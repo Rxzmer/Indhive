@@ -14,22 +14,22 @@ import java.util.stream.Collectors;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+        @Override
+        public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new UsernameNotFoundException(
+                                                "Usuario no encontrado con email: " + email));
 
-        List<SimpleGrantedAuthority> authorities = Arrays.stream(user.getRoles().split(","))
-                .map(role -> new SimpleGrantedAuthority(role.trim()))
-                .collect(Collectors.toList());
+                List<SimpleGrantedAuthority> authorities = Arrays.stream(user.getRoles().split(","))
+                                .map(role -> new SimpleGrantedAuthority(role.trim()))
+                                .collect(Collectors.toList());
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                authorities
-        );
-    }
+                return new org.springframework.security.core.userdetails.User(
+                                user.getEmail(), // Usar el email como identificador principal
+                                user.getPassword(),
+                                authorities);
+        }
 }
