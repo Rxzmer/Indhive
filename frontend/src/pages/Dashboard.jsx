@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import './Register.css';
 import './Dashboard.css';
+import './Modal.css';
 import background from '../assets/background.jpg';
 import logo from '../assets/LogoInd.png';
 import { Link } from 'react-router-dom';
 import CreateUserModal from './CreateUserModal';
+import UserListModal from './UserListModal';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
-  const [showUsers, setShowUsers] = useState(false);
+  const [showUsersModal, setShowUsersModal] = useState(false);
   const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' });
   const [searchUser, setSearchUser] = useState('');
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -66,7 +68,7 @@ const Dashboard = () => {
 
   const adminActions = [
     { label: 'CREAR USUARIO', onClick: () => setShowCreateUserModal(true) },
-    { label: 'VER USUARIOS', onClick: () => { setShowUsers(true); fetchUsers(); } },
+    { label: 'VER USUARIOS', onClick: () => { setShowUsersModal(true); fetchUsers(); } },
   ];
 
   const handleLogout = () => {
@@ -75,7 +77,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="register-container">
+    <div className={`register-container ${showCreateUserModal || showUsersModal ? 'modal-open' : ''}`}>
       <div className="register-background" style={{ backgroundImage: `url(${background})` }} />
 
       <div className="landing-header" style={{ zIndex: 3 }}>
@@ -116,7 +118,7 @@ const Dashboard = () => {
             />
           </div>
 
-          <h2 className="section-title">PROYECTOS RECIENTES</h2>
+          <h2 className="section-title">TABLERO DE USUARIO</h2>
 
           <div className="projects-grid">
             {filteredProjects.map((p) => (
@@ -126,51 +128,23 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
-
-          {isAdmin && showUsers && (
-            <div className="user-table-container">
-              <h3>USUARIOS</h3>
-              <table className="user-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users
-                    .filter(u => u.username.toLowerCase().includes(searchUser.toLowerCase()) || u.email.toLowerCase().includes(searchUser.toLowerCase()))
-                    .map((u) => (
-                      <tr key={u.id}>
-                        <td>{u.id}</td>
-                        <td>{u.username}</td>
-                        <td>{u.email}</td>
-                        <td>{u.roles}</td>
-                        <td>
-                          <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="delete-user-button"
-                          >
-                            Eliminar User
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Modal de creación de usuario */}
       {showCreateUserModal && (
         <CreateUserModal
           onClose={() => setShowCreateUserModal(false)}
           onUserCreated={fetchUsers}
+        />
+      )}
+
+      {showUsersModal && (
+        <UserListModal
+          users={users}
+          onClose={() => setShowUsersModal(false)}
+          onDelete={handleDeleteUser}
+          search={searchUser}
+          setSearch={setSearchUser}
         />
       )}
     </div>
