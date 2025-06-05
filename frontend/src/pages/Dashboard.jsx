@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import './Register.css';
+import './Dashboard.css';
 import background from '../assets/background.jpg';
 import logo from '../assets/LogoInd.png';
 import { Link } from 'react-router-dom';
-import EditProfileModal from './EditProfileModal';
+import CreateUserModal from './CreateUserModal';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [showUsers, setShowUsers] = useState(false);
   const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' });
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editData, setEditData] = useState({ username: '', email: '', password: '' });
   const [searchUser, setSearchUser] = useState('');
-  const [anchorPosition, setAnchorPosition] = useState(null);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
 
@@ -34,10 +33,9 @@ const Dashboard = () => {
       .then((res) => res.json())
       .then(data => {
         setUserInfo({ username: data.username, email: data.email, id: data.id, roles: data.roles });
-        setEditData({ username: data.username, email: data.email, password: '' });
       })
       .catch(console.error);
-  }, []);
+  }, [apiUrl, token]);
 
   const fetchUsers = () => {
     fetch(`${apiUrl}/api/users`, {
@@ -57,60 +55,6 @@ const Dashboard = () => {
     setUsers(users.filter((u) => u.id !== id));
   };
 
-  const handleEditSubmit = async () => {
-    const body = {
-      username: editData.username,
-      email: editData.email,
-    };
-
-    try {
-      await fetch(`${apiUrl}/api/users/${userInfo.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (editData.password.trim()) {
-        const res = await fetch(`${apiUrl}/api/users/me/password`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ password: editData.password }),
-        });
-
-        const text = await res.text();
-
-        if (res.status === 401) {
-          alert("Tu sesión ha expirado. No se pudo cambiar la contraseña.");
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-          return;
-        }
-
-        if (!res.ok) {
-          alert("Error al cambiar la contraseña: " + text);
-          return;
-        }
-
-        alert("Contraseña cambiada correctamente. Se cerrará tu sesión por seguridad.");
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        return;
-      }
-
-      setShowEditModal(false);
-      window.location.reload();
-
-    } catch (err) {
-      alert("Error inesperado: " + err.message);
-    }
-  };
-
   const filteredProjects = projects.filter((p) =>
     p.title.toLowerCase().includes(searchUser.toLowerCase())
   );
@@ -121,7 +65,7 @@ const Dashboard = () => {
   ];
 
   const adminActions = [
-    { label: 'CREAR USUARIO', path: '/create-user' },
+    { label: 'CREAR USUARIO', onClick: () => setShowCreateUserModal(true) },
     { label: 'VER USUARIOS', onClick: () => { setShowUsers(true); fetchUsers(); } },
   ];
 
@@ -132,73 +76,26 @@ const Dashboard = () => {
 
   return (
     <div className="register-container">
-      <div
-        className="register-background"
-        style={{ backgroundImage: `url(${background})` }}
-      />
+      <div className="register-background" style={{ backgroundImage: `url(${background})` }} />
 
       <div className="landing-header" style={{ zIndex: 3 }}>
         <Link to="/" onClick={handleLogout} className="nav-link">LOG OUT</Link>
       </div>
 
-      <div style={{ display: 'flex', height: '100vh', width: '100%', zIndex: 1 }}>
-        <div style={{ width: '350px', padding: '2rem', backgroundColor: 'rgba(27,31,39,0.6)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-          <div style={{
-            width: '90px',
-            height: '90px',
-            borderRadius: '50%',
-            backgroundColor: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2.5rem',
-            fontWeight: 'bold',
-            color: '#1e1e1e',
-            marginTop: '1rem',
-            marginBottom: '1.5rem',
-            border: '2px solid white'
-          }}>
+      <div className="dashboard-layout">
+        <div className="dashboard-sidebar">
+          <div className="dashboard-avatar">
             {userInfo.username.charAt(0).toUpperCase()}
           </div>
 
-          <div
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setAnchorPosition({ top: rect.top, left: rect.right });
-              setShowEditModal(true);
-            }}
-            style={{
-              position: 'absolute',
-              top: '1.2rem',
-              right: '1.2rem',
-              cursor: 'pointer',
-              color: 'white',
-              fontSize: '1.2rem'
-            }}
-            title="Editar perfil"
-          >
-            ✎
-          </div>
+          <h2 className="dashboard-title">{userInfo.username.toUpperCase()}</h2>
+          <p className="dashboard-info">{userInfo.email}</p>
 
-          <h2 className="dashboard-title" style={{ color: 'white', marginBottom: '0.2rem' }}>{userInfo.username.toUpperCase()}</h2>
-          <p className="dashboard-info" style={{ color: 'white', marginBottom: '1rem' }}>{userInfo.email}</p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', width: '100%' }}>
+          <div className="dashboard-button-group">
             {[...commonActions, ...(isAdmin ? adminActions : [])].map((btn, index) => (
               <button
                 key={index}
-                className="register-button"
-                style={{
-                  width: '100%',
-                  backgroundColor: 'white',
-                  color: '#000',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                  transition: 'all 0.3s',
-                  cursor: 'pointer'
-                }}
-                onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-                onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}
+                className="register-button dashboard-button"
                 onClick={btn.onClick || (() => window.location.href = btn.path)}
               >
                 {btn.label}
@@ -207,47 +104,40 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', color: 'white' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <img src={logo} alt="Indhive" style={{ height: '100px' }} />
+        <div className="dashboard-content">
+          <div className="dashboard-header">
+            <img src={logo} alt="Indhive" className="dashboard-logo" />
             <input
               type="text"
               placeholder="Buscar..."
               value={searchUser}
               onChange={(e) => setSearchUser(e.target.value)}
-              className="register-input"
-              style={{
-                maxWidth: '300px',
-                height: '32px',
-                padding: '4px 8px',
-                fontSize: '14px',
-                marginTop: '0.5rem'
-              }}
+              className="register-input search-input"
             />
           </div>
 
-          <h2 style={{ marginBottom: '1rem' }}>PROYECTOS RECIENTES</h2>
+          <h2 className="section-title">PROYECTOS RECIENTES</h2>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="projects-grid">
             {filteredProjects.map((p) => (
-              <div key={p.id} style={{ background: '#1e2228', padding: '1rem', borderRadius: '8px', width: '250px', color: 'white', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
+              <div key={p.id} className="project-card">
                 <h4>{p.title}</h4>
-                <p style={{ fontSize: '0.85rem' }}>{p.description}</p>
+                <p className="project-description">{p.description}</p>
               </div>
             ))}
           </div>
 
           {isAdmin && showUsers && (
-            <div style={{ marginTop: '2rem' }}>
+            <div className="user-table-container">
               <h3>USUARIOS</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', backgroundColor: '#2c2f36', color: 'white', textAlign: 'left' }}>
+              <table className="user-table">
                 <thead>
                   <tr>
-                    <th style={{ padding: '0.5rem' }}>ID</th>
-                    <th style={{ padding: '0.5rem' }}>Usuario</th>
-                    <th style={{ padding: '0.5rem' }}>Email</th>
-                    <th style={{ padding: '0.5rem' }}>Rol</th>
-                    <th style={{ padding: '0.5rem' }}>Acciones</th>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -255,14 +145,15 @@ const Dashboard = () => {
                     .filter(u => u.username.toLowerCase().includes(searchUser.toLowerCase()) || u.email.toLowerCase().includes(searchUser.toLowerCase()))
                     .map((u) => (
                       <tr key={u.id}>
-                        <td style={{ padding: '0.5rem' }}>{u.id}</td>
-                        <td style={{ padding: '0.5rem' }}>{u.username}</td>
-                        <td style={{ padding: '0.5rem' }}>{u.email}</td>
-                        <td style={{ padding: '0.5rem' }}>{u.roles}</td>
-                        <td style={{ padding: '0.5rem' }}>
+                        <td>{u.id}</td>
+                        <td>{u.username}</td>
+                        <td>{u.email}</td>
+                        <td>{u.roles}</td>
+                        <td>
                           <button
                             onClick={() => handleDeleteUser(u.id)}
-                            style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>
+                            className="delete-user-button"
+                          >
                             Eliminar User
                           </button>
                         </td>
@@ -275,14 +166,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {showEditModal && (
-        <EditProfileModal
-          userInfo={userInfo}
-          editData={editData}
-          setEditData={setEditData}
-          onClose={() => setShowEditModal(false)}
-          onSave={handleEditSubmit}
-          anchorPosition={anchorPosition}
+      {/* Modal de creación de usuario */}
+      {showCreateUserModal && (
+        <CreateUserModal
+          onClose={() => setShowCreateUserModal(false)}
+          onUserCreated={fetchUsers}
         />
       )}
     </div>
