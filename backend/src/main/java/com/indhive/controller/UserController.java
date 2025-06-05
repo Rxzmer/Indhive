@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,10 @@ import org.springframework.security.core.Authentication;
 @RequestMapping("/api/users")
 @Tag(name = "Usuarios", description = "Gestión de usuarios del sistema")
 public class UserController {
+
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private UserService userService;
@@ -66,25 +71,38 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    @Operation(summary = "Actualizar un usuario existente", description = "Actualiza la información de un usuario. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario) {
-        return userService.obtenerUsuarioPorId(id)
-                .map(u -> {
-                    u.setUsername(usuario.getUsername());
-                    u.setEmail(usuario.getEmail());
-                    u.setRoles(usuario.getRoles());
-                    if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
-                        u.setPassword(usuario.getPassword());
-                    }
-                    User updated = userService.guardarUsuario(u);
-                    updated.setPassword(null);
-                    return ResponseEntity.ok(updated);
-                }).orElse(ResponseEntity.notFound().build());
-    }
+    @Operation(summary = "Actualizar un usuario existente", description = "Actualiza la información de un usuario (sin afectar su contraseña). Solo accesible para usuarios con rol ADMIN o el mismo usuario.")
+@ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
+@ApiResponse(responseCode = "403", description = "Sin permisos para modificar")
+@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+@PutMapping("/{id}")
+@PreAuthorize("isAuthenticated()")
+public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario, Authentication auth) {
+    String emailAutenticado = auth.getName();
+
+    return userService.obtenerUsuarioPorId(id)
+        .map(u -> {
+            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isSelf = u.getEmail().equals(emailAutenticado);
+
+            if (!isAdmin && !isSelf) {
+                return ResponseEntity.status(403).body((User) null);
+            }
+
+            u.setUsername(usuario.getUsername());
+            u.setEmail(usuario.getEmail());
+
+            // Solo admin puede cambiar roles
+            if (isAdmin && usuario.getRoles() != null) {
+                u.setRoles(usuario.getRoles());
+            }
+
+            User updated = userService.guardarUsuario(u);
+            updated.setPassword(null); // Nunca devolver password
+            return ResponseEntity.ok(updated);
+        })
+        .orElse(ResponseEntity.notFound().build());
+}
 
     @Operation(summary = "Eliminar un usuario", description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
     @ApiResponse(responseCode = "200", description = "Usuario eliminado correctamente")

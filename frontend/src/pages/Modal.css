@@ -39,6 +39,7 @@
 }
 
 .modal-form input,
+.modal-form textarea,
 .modal-form select {
   width: 100%;
   padding: 0.5rem;
@@ -47,6 +48,8 @@
   border: 1px solid #444;
   background-color: #1e1e1e;
   color: white;
+  box-sizing: border-box;
+  resize: vertical; 
 }
 
 .modal-buttons {

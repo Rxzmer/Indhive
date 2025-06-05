@@ -6,6 +6,7 @@ import background from '../assets/background.jpg';
 import logo from '../assets/LogoInd.png';
 import { Link } from 'react-router-dom';
 import CreateUserModal from './CreateUserModal';
+import CreateProjectModal from './CreateProjectModal';
 import UserListModal from './UserListModal';
 
 const Dashboard = () => {
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' });
   const [searchUser, setSearchUser] = useState('');
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
 
@@ -62,7 +64,7 @@ const Dashboard = () => {
   );
 
   const commonActions = [
-    { label: 'CREAR PROYECTO', path: '/create-project' },
+    { label: 'CREAR PROYECTO', onClick: () => setShowCreateProjectModal(true) },
     { label: 'LISTAR PROYECTOS', path: '/projects' },
   ];
 
@@ -147,6 +149,20 @@ const Dashboard = () => {
           setSearch={setSearchUser}
         />
       )}
+
+      {showCreateProjectModal && (
+        <CreateProjectModal
+          onClose={() => setShowCreateProjectModal(false)}
+          onProjectCreated={() => {
+            // recarga proyectos
+            fetch(`${apiUrl}/api/projects`, { headers: { Authorization: `Bearer ${token}` } })
+              .then(res => res.json())
+              .then(setProjects);
+            setShowCreateProjectModal(false);
+          }}
+        />
+      )}
+
     </div>
   );
 };

@@ -6,7 +6,7 @@ const EditProfileModal = ({ userInfo, editData, setEditData, onClose, onSave, an
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (userInfo && userInfo.username) {
+    if (userInfo?.username) {
       const input = document.getElementById('edit-username');
       if (input) input.focus();
     }
@@ -24,7 +24,7 @@ const EditProfileModal = ({ userInfo, editData, setEditData, onClose, onSave, an
     }
 
     setLoading(true);
-    await onSave();
+    await onSave(); // Esta función solo envía username y email
     setLoading(false);
   };
 
@@ -70,16 +70,14 @@ const EditProfileModal = ({ userInfo, editData, setEditData, onClose, onSave, an
           />
           {errors.email && <small className="register-error">{errors.email}</small>}
 
-          <input
-            type="password"
-            value={editData.password}
-            onChange={(e) => setEditData({ ...editData, password: e.target.value })}
-            placeholder="Nueva contraseña (opcional)"
-            className="register-input"
-          />
-
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <button type="button" onClick={onClose} style={{ background: '#666', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px' }}>Cancelar</button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ background: '#666', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px' }}
+            >
+              Cancelar
+            </button>
             {loading ? (
               <div className="dashboard-loading">Guardando...</div>
             ) : (
