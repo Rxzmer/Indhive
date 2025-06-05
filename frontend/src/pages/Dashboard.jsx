@@ -9,19 +9,17 @@ const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [showUsers, setShowUsers] = useState(false);
-  const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' }); 
+  const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState({ username: '', email: '', password: '' });
   const [searchUser, setSearchUser] = useState('');
   const [anchorPosition, setAnchorPosition] = useState(null);
 
-  const isAdmin = userInfo.roles?.includes('ADMIN'); 
-
+  const isAdmin = userInfo.roles?.includes('ADMIN');
 
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetch(`${apiUrl}/api/projects`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -117,11 +115,14 @@ const Dashboard = () => {
     p.title.toLowerCase().includes(searchUser.toLowerCase())
   );
 
-  const adminActions = [
+  const commonActions = [
     { label: 'CREAR PROYECTO', path: '/create-project' },
+    { label: 'LISTAR PROYECTOS', path: '/projects' },
+  ];
+
+  const adminActions = [
     { label: 'CREAR USUARIO', path: '/create-user' },
     { label: 'VER USUARIOS', onClick: () => { setShowUsers(true); fetchUsers(); } },
-    { label: 'LISTAR PROYECTOS', path: '/projects' },
   ];
 
   const handleLogout = () => {
@@ -183,7 +184,7 @@ const Dashboard = () => {
           <p className="dashboard-info" style={{ color: 'white', marginBottom: '1rem' }}>{userInfo.email}</p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', width: '100%' }}>
-            {adminActions.map((btn, index) => (
+            {[...commonActions, ...(isAdmin ? adminActions : [])].map((btn, index) => (
               <button
                 key={index}
                 className="register-button"
@@ -198,7 +199,8 @@ const Dashboard = () => {
                 }}
                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
                 onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}
-                onClick={btn.onClick || (() => window.location.href = btn.path)}>
+                onClick={btn.onClick || (() => window.location.href = btn.path)}
+              >
                 {btn.label}
               </button>
             ))}
@@ -235,7 +237,7 @@ const Dashboard = () => {
             ))}
           </div>
 
-          {showUsers && (
+          {isAdmin && showUsers && (
             <div style={{ marginTop: '2rem' }}>
               <h3>USUARIOS</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', backgroundColor: '#2c2f36', color: 'white', textAlign: 'left' }}>

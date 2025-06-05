@@ -2,6 +2,7 @@ package com.indhive.controller;
 
 import com.indhive.model.User;
 import com.indhive.service.UserService;
+import com.indhive.security.JwtUtils;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +33,9 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtUtils jwtUtils;
+
     @Operation(summary = "Listar todos los usuarios", description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
     @ApiResponse(responseCode = "200", description = "Lista de usuarios", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
@@ -47,10 +51,9 @@ public class UserController {
     public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
         return userOpt.map(user -> {
-            user.setPassword(null); // No devolver la contraseña
+            user.setPassword(null);
             return ResponseEntity.ok(user);
-        })
-                .orElse(ResponseEntity.notFound().build());
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Crear un nuevo usuario", description = "Permite crear un nuevo usuario. Solo accesible para usuarios con rol ADMIN.")
@@ -59,10 +62,10 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> crear(@RequestBody User usuario) {
         if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
-            usuario.setRoles("ROLE_USER"); // Valor por defecto si está vacío
+            usuario.setRoles("ROLE_USER");
         }
         User savedUser = userService.guardarUsuario(usuario);
-        savedUser.setPassword(null); // No devolver el password cifrado
+        savedUser.setPassword(null);
         return ResponseEntity.ok(savedUser);
     }
 
@@ -77,12 +80,10 @@ public class UserController {
                     u.setUsername(usuario.getUsername());
                     u.setEmail(usuario.getEmail());
                     u.setRoles(usuario.getRoles());
-
                     if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
-                        u.setPassword(usuario.getPassword()); // ✅ sin codificar aquí
+                        u.setPassword(usuario.getPassword());
                     }
-
-                    User updated = userService.guardarUsuario(u); // ← codifica dentro del service
+                    User updated = userService.guardarUsuario(u);
                     updated.setPassword(null);
                     return ResponseEntity.ok(updated);
                 }).orElse(ResponseEntity.notFound().build());
@@ -126,28 +127,18 @@ public class UserController {
     @PutMapping("/me/password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
-        System.out.println(" [DEBUG] Entrando a /me/password");
-        System.out.println(" Usuario autenticado: " + auth.getName());
-
-        String email = auth.getName(); // ← nombre más claro ahora que es un email
-
+        String email = auth.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
         if (userOpt.isEmpty()) {
-            System.out.println("❌ Usuario no encontrado: " + email);
             return ResponseEntity.status(404).body("Usuario no encontrado");
         }
-
         String nuevaPassword = body.get("password");
         if (nuevaPassword == null || nuevaPassword.isBlank()) {
-            System.out.println("⚠️ Contraseña vacía.");
             return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
         }
-
         User user = userOpt.get();
         user.setPassword(nuevaPassword);
         userService.guardarUsuario(user);
-
-        System.out.println("✅ Contraseña actualizada para: " + email);
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 
@@ -157,19 +148,21 @@ public class UserController {
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> actualizarMiPerfil(@RequestBody Map<String, String> datos, Authentication auth) {
-        String email = auth.getName(); // ✅ auth.getName() devuelve el email del usuario autenticado
-        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email); // ✅ busca por email
-
+        String email = auth.getName();
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(404).body("Usuario no encontrado");
         }
-
         User user = userOpt.get();
         user.setUsername(datos.get("username"));
         user.setEmail(datos.get("email"));
-
         userService.guardarUsuario(user);
-        return ResponseEntity.ok("Perfil actualizado");
-    }
 
+        String nuevoToken = jwtUtils.generateJwtToken(user.getEmail(), user.getRoles());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Perfil actualizado correctamente");
+        response.put("token", nuevoToken);
+
+        return ResponseEntity.ok(response);
+    }
 }
