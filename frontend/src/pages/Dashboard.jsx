@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import CreateUserModal from './CreateUserModal';
 import CreateProjectModal from './CreateProjectModal';
 import UserListModal from './UserListModal';
+import Toast from './Toast';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
@@ -17,9 +18,10 @@ const Dashboard = () => {
   const [searchUser, setSearchUser] = useState('');
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('info');
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
-
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
@@ -77,6 +79,34 @@ const Dashboard = () => {
     localStorage.removeItem('token');
     window.location.href = '/';
   };
+
+  const handleBecomeCreator = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/users/me/creator`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        setUserInfo(prev => ({ ...prev, roles: 'ROLE_USER,ROLE_CREATOR' })); // o volver a decodificar roles del nuevo token
+        setToastType('success');
+        setToastMessage('🎉 ¡Ahora eres creador!');
+      } else {
+        setToastType('error');
+        setToastMessage('No se pudo actualizar tu rol.');
+      }
+    } catch (err) {
+      console.error(err);
+      setToastType('error');
+      setToastMessage('Error de red');
+    }
+  };
+
 
   return (
     <div className={`register-container ${showCreateUserModal || showUsersModal ? 'modal-open' : ''}`}>
@@ -150,11 +180,19 @@ const Dashboard = () => {
         />
       )}
 
+      {!userInfo.roles?.includes('ROLE_CREATOR') && (
+        <button
+          className="become-creator-button"
+          onClick={handleBecomeCreator}
+        >
+          ⭐ ¡Hazte Creador!
+        </button>
+      )}
+
       {showCreateProjectModal && (
         <CreateProjectModal
           onClose={() => setShowCreateProjectModal(false)}
           onProjectCreated={() => {
-            // recarga proyectos
             fetch(`${apiUrl}/api/projects`, { headers: { Authorization: `Bearer ${token}` } })
               .then(res => res.json())
               .then(setProjects);
@@ -163,6 +201,11 @@ const Dashboard = () => {
         />
       )}
 
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setToastMessage('')}
+      />
     </div>
   );
 };

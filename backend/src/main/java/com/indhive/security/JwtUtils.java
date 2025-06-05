@@ -2,12 +2,15 @@ package com.indhive.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -16,57 +19,72 @@ public class JwtUtils {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    private Key signingKey;
+
+    @PostConstruct
+    public void init() {
+        if (jwtSecret == null || jwtSecret.length() < 32) {
+            throw new IllegalArgumentException("La clave secreta JWT debe tener al menos 32 caracteres.");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // Método para generar el token JWT
     public String generateJwtToken(String username, String roles) {
-        // Asegurar que cada rol tiene prefijo ROLE_
-        String rolesWithPrefix = Arrays.stream(roles.split(","))
-                .map(String::trim)
-                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
-                .collect(Collectors.joining(","));
+        String rolesWithPrefix = normalizeRoles(roles);
 
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", rolesWithPrefix)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24h
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .setExpiration(new Date(System.currentTimeMillis() + Duration.ofHours(24).toMillis()))
+                .signWith(signingKey, SignatureAlgorithm.HS512)
                 .compact();
     }
 
-    // Obtener el username desde el token JWT
     public String getUserNameFromJwtToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+        return parseClaims(token).getSubject();
     }
 
-    // Obtener los roles desde el token JWT
     public String getRolesFromJwtToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        return parseClaims(token).get("roles", String.class);
+    }
+
+    public Optional<String> safeGetUserName(String token) {
+        try {
+            return Optional.of(getUserNameFromJwtToken(token));
+        } catch (JwtException e) {
+            return Optional.empty();
+        }
+    }
+
+    public boolean validateJwtToken(String authToken) {
+        try {
+            parseClaims(authToken);
+            return true;
+        } catch (ExpiredJwtException e) {
+            System.out.println("Token expirado: " + e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            System.out.println("Token no soportado: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            System.out.println("Token mal formado: " + e.getMessage());
+        } catch (SecurityException | IllegalArgumentException e) {
+            System.out.println("Token inválido: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        return claims.get("roles", String.class);
     }
 
-    // Validar el token JWT
-    public boolean validateJwtToken(String authToken) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(authToken);
-            return true;
-        } catch (JwtException e) {
-            return false;
-        }
+    private String normalizeRoles(String roles) {
+        return Arrays.stream(roles.split(","))
+                .map(String::trim)
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                .collect(Collectors.joining(","));
     }
 }

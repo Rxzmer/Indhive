@@ -1,25 +1,25 @@
 package com.indhive.controller;
 
+import com.indhive.dto.UserDTO;
+import com.indhive.dto.UserRequestDTO;
 import com.indhive.model.User;
 import com.indhive.service.UserService;
 import com.indhive.security.JwtUtils;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.HashMap;
+
 import org.springframework.security.core.Authentication;
 
 @RestController
@@ -27,88 +27,77 @@ import org.springframework.security.core.Authentication;
 @Tag(name = "Usuarios", description = "Gestión de usuarios del sistema")
 public class UserController {
 
+    private final UserService userService;
+    private final JwtUtils jwtUtils;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private UserService userService;
-
-
-    @Autowired
-    private JwtUtils jwtUtils;
+    public UserController(UserService userService, JwtUtils jwtUtils) {
+        this.userService = userService;
+        this.jwtUtils = jwtUtils;
+    }
 
     @Operation(summary = "Listar todos los usuarios", description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Lista de usuarios", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<User> listar() {
-        return userService.listarUsuarios();
+    public List<UserDTO> listar() {
+        return userService.listarUsuarios().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    @Operation(summary = "Obtener usuario por ID", description = "Devuelve la información de un usuario específico, excluyendo la contraseña. Accesible para cualquier usuario autenticado.")
-    @ApiResponse(responseCode = "200", description = "Usuario encontrado", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    @Operation(summary = "Obtener usuario por ID", description = "Devuelve la información de un usuario específico.")
     @GetMapping("/{id}")
-    public ResponseEntity<User> obtenerPorId(@PathVariable Long id) {
-        Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
-        return userOpt.map(user -> {
-            user.setPassword(null);
-            return ResponseEntity.ok(user);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<UserDTO> obtenerPorId(@PathVariable Long id) {
+        return userService.obtenerUsuarioPorId(id)
+                .map(this::toDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Crear un nuevo usuario", description = "Permite crear un nuevo usuario. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Usuario creado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
+    @Operation(summary = "Crear un nuevo usuario", description = "Solo accesible para usuarios con rol ADMIN.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<User> crear(@RequestBody User usuario) {
-        if (usuario.getRoles() == null || usuario.getRoles().isBlank()) {
-            usuario.setRoles("ROLE_USER");
-        }
-        User savedUser = userService.guardarUsuario(usuario);
-        savedUser.setPassword(null);
-        return ResponseEntity.ok(savedUser);
+    public ResponseEntity<UserDTO> crear(@Valid @RequestBody UserRequestDTO dto) {
+        User nuevo = new User();
+        nuevo.setUsername(dto.getUsername());
+        nuevo.setEmail(dto.getEmail());
+        nuevo.setPassword(dto.getPassword());
+        nuevo.setRoles(dto.getRoles() != null ? dto.getRoles() : "ROLE_USER");
+
+        User saved = userService.guardarUsuario(nuevo);
+        return ResponseEntity.ok(toDTO(saved));
     }
 
-    @Operation(summary = "Actualizar un usuario existente", description = "Actualiza la información de un usuario (sin afectar su contraseña). Solo accesible para usuarios con rol ADMIN o el mismo usuario.")
-@ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class)))
-@ApiResponse(responseCode = "403", description = "Sin permisos para modificar")
-@ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-@PutMapping("/{id}")
-@PreAuthorize("isAuthenticated()")
-public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User usuario, Authentication auth) {
-    String emailAutenticado = auth.getName();
+    @Operation(summary = "Actualizar un usuario existente", description = "Solo accesible para admins o el propio usuario.")
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDTO> actualizar(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto,
+            Authentication auth) {
+        String emailAutenticado = auth.getName();
 
-    return userService.obtenerUsuarioPorId(id)
-        .map(u -> {
-            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-            boolean isSelf = u.getEmail().equals(emailAutenticado);
+        Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
+        if (userOpt.isEmpty())
+            return ResponseEntity.notFound().build();
 
-            if (!isAdmin && !isSelf) {
-                return ResponseEntity.status(403).body((User) null);
-            }
+        User u = userOpt.get();
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isSelf = u.getEmail().equals(emailAutenticado);
 
-            u.setUsername(usuario.getUsername());
-            u.setEmail(usuario.getEmail());
+        if (!isAdmin && !isSelf)
+            return ResponseEntity.status(403).build();
 
-            // Solo admin puede cambiar roles
-            if (isAdmin && usuario.getRoles() != null) {
-                u.setRoles(usuario.getRoles());
-            }
+        u.setUsername(dto.getUsername());
+        u.setEmail(dto.getEmail());
+        if (isAdmin && dto.getRoles() != null) {
+            u.setRoles(dto.getRoles());
+        }
 
-            User updated = userService.guardarUsuario(u);
-            updated.setPassword(null); // Nunca devolver password
-            return ResponseEntity.ok(updated);
-        })
-        .orElse(ResponseEntity.notFound().build());
-}
+        User actualizado = userService.actualizarUsuario(u.getId(), u);
+        return ResponseEntity.ok(toDTO(actualizado));
+    }
 
-    @Operation(summary = "Eliminar un usuario", description = "Elimina un usuario por su ID. Solo accesible para usuarios con rol ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Usuario eliminado correctamente")
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar un usuario", description = "Solo accesible para usuarios con rol ADMIN.")
     @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         if (userService.obtenerUsuarioPorId(id).isPresent()) {
             userService.eliminarUsuario(id);
@@ -117,67 +106,88 @@ public ResponseEntity<User> actualizar(@PathVariable Long id, @RequestBody User 
         return ResponseEntity.notFound().build();
     }
 
-    @Operation(summary = "Listar proyectos de un usuario", description = "Devuelve los proyectos que un usuario posee y en los que colabora. Accesible para cualquier usuario autenticado.")
-    @ApiResponse(responseCode = "200", description = "Proyectos obtenidos correctamente")
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    @Operation(summary = "Listar proyectos de un usuario", description = "Proyectos propios y colaboraciones.")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}/projects")
     public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
-        Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        User user = userOpt.get();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("ownedProjects", user.getOwnedProjects());
-        response.put("collaboratedProjects", user.getCollaboratedProjects());
-
-        return ResponseEntity.ok(response);
+        return userService.obtenerUsuarioPorId(id)
+                .map(user -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("ownedProjects", user.getOwnedProjects());
+                    response.put("collaboratedProjects", user.getCollaboratedProjects());
+                    return ResponseEntity.ok(response);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Cambiar mi contraseña", description = "Permite a un usuario autenticado actualizar su contraseña.")
-    @ApiResponse(responseCode = "200", description = "Contraseña cambiada correctamente")
-    @ApiResponse(responseCode = "400", description = "Contraseña inválida")
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    @PutMapping("/me/password")
+    @Operation(summary = "Cambiar mi contraseña", description = "Requiere autenticación.")
     @PreAuthorize("isAuthenticated()")
+    @PutMapping("/me/password")
     public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
         String email = auth.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
-        if (userOpt.isEmpty()) {
+        if (userOpt.isEmpty())
             return ResponseEntity.status(404).body("Usuario no encontrado");
-        }
+
         String nuevaPassword = body.get("password");
         if (nuevaPassword == null || nuevaPassword.isBlank()) {
             return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
         }
+
         User user = userOpt.get();
         user.setPassword(nuevaPassword);
         userService.guardarUsuario(user);
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 
-    @Operation(summary = "Actualizar mi perfil", description = "Permite a un usuario autenticado actualizar su nombre y correo.")
-    @ApiResponse(responseCode = "200", description = "Perfil actualizado correctamente")
-    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    @PutMapping("/me")
+    @Operation(summary = "Actualizar mi perfil", description = "Actualiza nombre y email del usuario autenticado.")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> actualizarMiPerfil(@RequestBody Map<String, String> datos, Authentication auth) {
+    @PutMapping("/me")
+    public ResponseEntity<Map<String, String>> actualizarMiPerfil(@Valid @RequestBody UserRequestDTO dto,
+            Authentication auth) {
         String email = auth.getName();
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Usuario no encontrado");
-        }
-        User user = userOpt.get();
-        user.setUsername(datos.get("username"));
-        user.setEmail(datos.get("email"));
-        userService.guardarUsuario(user);
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).build();
 
-        String nuevoToken = jwtUtils.generateJwtToken(user.getEmail(), user.getRoles());
+        User user = userOpt.get();
+        user.setUsername(dto.getUsername());
+        user.setEmail(dto.getEmail());
+
+        User actualizado = userService.actualizarUsuario(user.getId(), user);
+        String nuevoToken = jwtUtils.generateJwtToken(actualizado.getEmail(), actualizado.getRoles());
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "Perfil actualizado correctamente");
         response.put("token", nuevoToken);
-
         return ResponseEntity.ok(response);
+    }
+
+    // Conversión manual User → UserDTO
+    private UserDTO toDTO(User u) {
+        return new UserDTO(u.getId(), u.getUsername(), u.getEmail(), u.getRoles());
+    }
+
+    @Operation(summary = "Conviértete en creador", description = "Añade el rol CREATOR al usuario autenticado.")
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/me/creator")
+    public ResponseEntity<Map<String, String>> convertirseEnCreador(Authentication auth) {
+        String email = auth.getName();
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).build();
+
+        User user = userOpt.get();
+        String rolesActuales = user.getRoles();
+
+        if (!rolesActuales.contains("ROLE_CREATOR")) {
+            String nuevosRoles = rolesActuales + (rolesActuales.isBlank() ? "" : ",") + "ROLE_CREATOR";
+            user.setRoles(nuevosRoles);
+            userService.guardarUsuario(user);
+        }
+
+        String nuevoToken = jwtUtils.generateJwtToken(user.getEmail(), user.getRoles());
+
+        return ResponseEntity.ok(Map.of("token", nuevoToken));
     }
 }

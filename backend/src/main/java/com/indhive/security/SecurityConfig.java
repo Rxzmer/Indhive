@@ -32,8 +32,7 @@ public class SecurityConfig {
             JwtAuthFilter jwtAuthFilter,
             CustomUserDetailsService userDetailsService,
             CustomAuthEntryPoint customAuthEntryPoint,
-            CustomAccessDeniedHandler customAccessDeniedHandler
-    ) {
+            CustomAccessDeniedHandler customAccessDeniedHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.customAuthEntryPoint = customAuthEntryPoint;
@@ -74,26 +73,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-    .requestMatchers(
-        "/api/auth/login",
-        "/api/auth/register",
-        "/api/auth/recover",
-        "/api/auth/reset-password",
-        "/swagger-ui.html",
-        "/swagger-ui/**",
-        "/v3/api-docs/**")
-    .permitAll()
-    .anyRequest().authenticated()
-            )
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(customAuthEntryPoint)
-                .accessDeniedHandler(customAccessDeniedHandler)
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/recover",
+                                "/api/auth/reset-password",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 import './Modal.css';
 
 const CreateProjectModal = ({ onClose, onProjectCreated }) => {
@@ -6,6 +6,9 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
     title: '',
     description: ''
   });
+  const [query, setQuery] = useState('');
+  const [userSuggestions, setUserSuggestions] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,6 +17,35 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleUserSearch = async (text) => {
+    setQuery(text);
+    if (text.trim().length < 2) return setUserSuggestions([]);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const users = await res.json();
+      const filtered = users.filter(u =>
+        u.username.toLowerCase().includes(text.toLowerCase()) &&
+        !selectedUsers.some(sel => sel.id === u.id)
+      );
+      setUserSuggestions(filtered);
+    } catch (err) {
+      console.error('Error buscando usuarios', err);
+    }
+  };
+
+  const addUser = (user) => {
+    setSelectedUsers([...selectedUsers, user]);
+    setUserSuggestions([]);
+    setQuery('');
+  };
+
+  const removeUser = (id) => {
+    setSelectedUsers(selectedUsers.filter(u => u.id !== id));
   };
 
   const handleSubmit = async (e) => {
@@ -27,6 +59,12 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
       return;
     }
 
+    const payload = {
+      title: form.title,
+      description: form.description,
+      collaboratorIds: selectedUsers.map(u => u.id)
+    };
+
     try {
       const res = await fetch(`${apiUrl}/api/projects`, {
         method: 'POST',
@@ -34,7 +72,7 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -42,8 +80,8 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
         throw new Error(msg || 'Error al crear proyecto');
       }
 
-      onProjectCreated(); // Actualiza la lista de proyectos
-      onClose(); // Cierra el modal
+      onProjectCreated();
+      onClose();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -72,6 +110,30 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
             onChange={handleChange}
             rows={4}
           />
+
+          <div className="user-autocomplete">
+            <input
+              type="text"
+              placeholder="Buscar usuarios colaboradores"
+              value={query}
+              onChange={(e) => handleUserSearch(e.target.value)}
+            />
+            {userSuggestions.length > 0 && (
+              <ul className="suggestions-list">
+                {userSuggestions.map(u => (
+                  <li key={u.id} onClick={() => addUser(u)}>{u.username}</li>
+                ))}
+              </ul>
+            )}
+            <div className="selected-users">
+              {selectedUsers.map(u => (
+                <span key={u.id} className="user-tag">
+                  {u.username} <button onClick={() => removeUser(u.id)}>x</button>
+                </span>
+              ))}
+            </div>
+          </div>
+
           {error && <p className="modal-error">{error}</p>}
 
           <div className="modal-buttons">

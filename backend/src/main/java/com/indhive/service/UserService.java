@@ -46,4 +46,19 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+    public User actualizarUsuario(Long id, User usuarioActualizado) {
+    User usuarioExistente = userRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+    usuarioExistente.setUsername(usuarioActualizado.getUsername());
+    usuarioExistente.setEmail(usuarioActualizado.getEmail());
+
+    if (usuarioActualizado.getPassword() != null && !usuarioActualizado.getPassword().isBlank()) {
+        usuarioExistente.setPassword(passwordEncoder.encode(usuarioActualizado.getPassword()));
+    }
+    // Si no hay contraseña proporcionada, no modificar la existente
+
+    return userRepository.save(usuarioExistente);
+}
+
 }

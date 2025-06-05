@@ -142,3 +142,28 @@
   background: none;
   cursor: pointer;
 }
+
+.become-creator-button {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background-color: #ffe066;
+  color: #1e1e1e;
+  font-weight: bold;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: background-color 0.3s;
+  z-index: 10;
+}
+
+.become-creator-button:hover {
+  background-color: #ffd43b;
+}
+
+
+
+

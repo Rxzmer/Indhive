@@ -1,138 +1,134 @@
 package com.indhive.controller;
 
+import com.indhive.dto.ProjectDTO;
+import com.indhive.dto.ProjectRequestDTO;
 import com.indhive.model.Project;
 import com.indhive.model.User;
 import com.indhive.service.ProjectService;
 import com.indhive.service.UserService;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects")
-@Tag(name = "Proyectos", description = "Gestión de proyectos: creación, edición, listado y eliminación")
+@Tag(name = "Proyectos", description = "Gestión de proyectos con DTOs")
 public class ProjectController {
 
-    @Autowired
-    private ProjectService projectService;
+    private final ProjectService projectService;
+    private final UserService userService;
 
-    @Autowired
-    private UserService userService;
-
-    @Operation(summary = "Listar todos los proyectos",
-               description = "Obtiene la lista completa de proyectos disponibles para usuarios autenticados")
-    @ApiResponse(responseCode = "200", description = "Lista de proyectos", 
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = Project.class)))
-    @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public List<Project> listar() {
-        return projectService.listarProyectos();
+    public ProjectController(ProjectService projectService, UserService userService) {
+        this.projectService = projectService;
+        this.userService = userService;
     }
 
-    @Operation(summary = "Obtener proyecto por ID",
-               description = "Obtiene la información detallada de un proyecto específico por su identificador")
-    @ApiResponse(responseCode = "200", description = "Proyecto encontrado",
-                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
-    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public List<ProjectDTO> listar() {
+        return projectService.listarProyectos().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Project> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<ProjectDTO> obtenerPorId(@PathVariable Long id) {
         return projectService.obtenerProyectoPorId(id)
+                .map(this::toDTO)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Crear nuevo proyecto",
-               description = "Crea un nuevo proyecto asignado al usuario autenticado. Solo roles ADMIN o CREATOR pueden crear proyectos.")
-    @ApiResponse(responseCode = "200", description = "Proyecto creado exitosamente",
-                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
-    @ApiResponse(responseCode = "400", description = "Error en los datos enviados")
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<?> crear(@RequestBody Project project, Authentication authentication) {
-        String username = authentication.getName();
-        Optional<User> userOpt = userService.obtenerUsuarioPorUsername(username);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Usuario no encontrado");
+    public ResponseEntity<?> crear(@RequestBody ProjectRequestDTO dto, Authentication auth) {
+        String email = auth.getName();
+        Optional<User> ownerOpt = userService.obtenerUsuarioPorEmail(email);
+        if (ownerOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Usuario autenticado no encontrado");
         }
-        User user = userOpt.get();
-        project.setOwner(user);
-        Project creado = projectService.guardarProyecto(project);
-        return ResponseEntity.ok(creado);
+
+        Set<User> colaboradores = new HashSet<>();
+        if (dto.getCollaboratorIds() != null) {
+            colaboradores = dto.getCollaboratorIds().stream()
+                    .map(userService::obtenerUsuarioPorId)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+        }
+
+        Project nuevo = new Project(dto.getTitle(), dto.getDescription(), ownerOpt.get());
+        nuevo.setCollaborators(colaboradores);
+
+        Project guardado = projectService.guardarProyecto(nuevo);
+        return ResponseEntity.ok(toDTO(guardado));
     }
 
-    @Operation(summary = "Actualizar proyecto",
-               description = "Actualiza un proyecto existente. Solo roles ADMIN o CREATOR que sean dueños pueden actualizar.")
-    @ApiResponse(responseCode = "200", description = "Proyecto actualizado exitosamente",
-                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = Project.class)))
-    @ApiResponse(responseCode = "403", description = "No autorizado para actualizar este proyecto")
-    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<Project> actualizar(@PathVariable Long id,
-                                              @RequestBody Project project,
-                                              Authentication authentication) {
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody ProjectRequestDTO dto, Authentication auth) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
-        if (proyectoOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        if (proyectoOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        Project proyecto = proyectoOpt.get();
+        String email = auth.getName();
+
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
+        if (!isAdmin && !isOwner) return ResponseEntity.status(403).build();
+
+        proyecto.setTitle(dto.getTitle());
+        proyecto.setDescription(dto.getDescription());
+
+        if (dto.getCollaboratorIds() != null) {
+            Set<User> colaboradores = dto.getCollaboratorIds().stream()
+                    .map(userService::obtenerUsuarioPorId)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            proyecto.setCollaborators(colaboradores);
         }
-        Project proyectoExistente = proyectoOpt.get();
 
-        String username = authentication.getName();
-
-        if (!proyectoExistente.getOwner().getUsername().trim().equalsIgnoreCase(username.trim())) {
-            return ResponseEntity.status(403).build();
-        }
-
-        proyectoExistente.setTitle(project.getTitle());
-        proyectoExistente.setDescription(project.getDescription());
-        proyectoExistente.setCollaborators(project.getCollaborators());
-
-        Project actualizado = projectService.guardarProyecto(proyectoExistente);
-        return ResponseEntity.ok(actualizado);
+        Project actualizado = projectService.guardarProyecto(proyecto);
+        return ResponseEntity.ok(toDTO(actualizado));
     }
 
-    @Operation(summary = "Eliminar proyecto",
-               description = "Elimina un proyecto existente. Solo roles ADMIN o CREATOR que sean dueños pueden eliminar.")
-    @ApiResponse(responseCode = "200", description = "Proyecto eliminado exitosamente")
-    @ApiResponse(responseCode = "403", description = "No autorizado para eliminar este proyecto")
-    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication auth) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
-        if (proyectoOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
+        if (proyectoOpt.isEmpty()) return ResponseEntity.notFound().build();
+
         Project proyecto = proyectoOpt.get();
+        String email = auth.getName();
 
-        String username = authentication.getName();
-        User owner = proyecto.getOwner();
-
-        boolean isAdmin = authentication.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        boolean isOwner = owner != null && owner.getUsername() != null &&
-                          owner.getUsername().trim().equalsIgnoreCase(username.trim());
-
-        if (!isOwner && !isAdmin) {
-            return ResponseEntity.status(403).build();
-        }
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
+        if (!isAdmin && !isOwner) return ResponseEntity.status(403).build();
 
         projectService.eliminarProyecto(id);
         return ResponseEntity.ok().build();
+    }
+
+    private ProjectDTO toDTO(Project p) {
+        Set<String> collaboratorNames = p.getCollaborators().stream()
+                .map(User::getUsername)
+                .collect(Collectors.toSet());
+
+        return new ProjectDTO(
+                p.getId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getOwner().getUsername(),
+                collaboratorNames
+        );
     }
 }
