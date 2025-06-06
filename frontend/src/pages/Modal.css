@@ -266,22 +266,9 @@ body, #root {
   align-items: center;
 }
 
-.landing-header {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1; /* Más bajo que 9999 del modal */
-}
-
 .nav-link {
   position: relative;
   z-index: 5;
   color: white;
 }
 
-.modal-overlay {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  z-index: 2147483647 !important; /* nivel extremo */
-}

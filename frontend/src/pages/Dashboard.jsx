@@ -135,8 +135,15 @@ const Dashboard = () => {
     <div className={`register-container ${showCreateUserModal || showUsersModal ? 'modal-open' : ''}`}>
       <div className="register-background" style={{ backgroundImage: `url(${background})` }} />
 
-      <div className="landing-header">
+      <div className="dashboard-toolbar">
         <Link to="/" onClick={handleLogout} className="nav-link">LOG OUT</Link>
+        <input
+          type="text"
+          placeholder="Buscar..."
+          value={searchUser}
+          onChange={(e) => setSearchUser(e.target.value)}
+          className="register-input search-input"
+        />
       </div>
 
       <div className="dashboard-layout">
@@ -164,13 +171,6 @@ const Dashboard = () => {
         <div className="dashboard-content">
           <div className="dashboard-header">
             <img src={logo} alt="Indhive" className="dashboard-logo" />
-            <input
-              type="text"
-              placeholder="Buscar..."
-              value={searchUser}
-              onChange={(e) => setSearchUser(e.target.value)}
-              className="register-input search-input"
-            />
           </div>
 
           <h2 className="section-title">TABLERO DE USUARIO</h2>
