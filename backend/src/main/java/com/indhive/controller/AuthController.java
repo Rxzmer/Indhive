@@ -97,31 +97,24 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
-        String email = loginRequest.getEmail();
-        String password = loginRequest.getPassword();
-
-        if (loginAttemptService.isBlocked(email)) {
             return ResponseEntity.status(429).body("Demasiados intentos fallidos. Intenta más tarde.");
         }
 
         try {
-            Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-            );
-            SecurityContextHolder.getContext().setAuthentication(auth);
-
-            loginAttemptService.loginSucceeded(email);
-
-            Optional<User> userOpt = userRepository.findByEmail(email);
+            // Buscar al usuario por email
+            Optional<User> userOpt = userRepository.findByEmail(inputEmail);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(401).body("Usuario no encontrado");
             }
 
-            String token = jwtUtils.generateJwtToken(email, userOpt.get().getRoles());
+            String username = userOpt.get().getUsername();
 
-            return ResponseEntity.ok(Map.of("token", token));
-        } catch (BadCredentialsException e) {
-            loginAttemptService.loginFailed(email);
+            Authentication auth = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+            );
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            loginAttemptService.loginSucceeded(inputEmail);
+
             return ResponseEntity.status(401).body("Error: Credenciales inválidas");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error interno: " + e.getMessage());

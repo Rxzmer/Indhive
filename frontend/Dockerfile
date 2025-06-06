@@ -1,3 +1,4 @@
+
 # BASE
 FROM node:18-alpine AS base
 WORKDIR /app
@@ -8,7 +9,7 @@ RUN npm install
 FROM base AS dev
 WORKDIR /app
 COPY . .
-RUN npm install  # 👈 obligatorio para instalar cambios recientes (como react-quill)
+RUN npm install  
 
 ENV CHOKIDAR_USEPOLLING=true
 EXPOSE 3000
@@ -28,5 +29,6 @@ RUN npm run build
 # PROD STAGE (NGINX)
 FROM nginx:1.25-alpine AS prod
 COPY --from=build /app/build /usr/share/nginx/html
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

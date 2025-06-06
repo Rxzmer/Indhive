@@ -21,20 +21,7 @@ yarn-error.log*
 # Testing
 coverage/
 
-# -------------------------------
-# Java / Spring Boot (Backend)
-# -------------------------------
-*.class
-*.jar
-*.war
-*.iml
-*.log
 
-# Build output
-target/
-out/
-
-# IDEs
 .idea/
 *.iws
 *.ipr
