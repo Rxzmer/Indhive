@@ -1,4 +1,7 @@
-import React, { useState } from 'react'; 
+import React, { useState } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
 import './Modal.css';
 
 const CreateProjectModal = ({ onClose, onProjectCreated }) => {
@@ -103,12 +106,11 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
             required
             autoFocus
           />
-          <textarea
-            name="description"
-            placeholder="Descripción"
+          <label style={{ marginBottom: '0.5rem', display: 'block' }}>Descripción detallada:</label>
+          <ReactQuill
+            theme="snow"
             value={form.description}
-            onChange={handleChange}
-            rows={4}
+            onChange={(value) => setForm({ ...form, description: value })}
           />
 
           <div className="user-autocomplete">

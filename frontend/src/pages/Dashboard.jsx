@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import CreateUserModal from './CreateUserModal';
 import CreateProjectModal from './CreateProjectModal';
 import UserListModal from './UserListModal';
+import ProjectListModal from './ProjectListModal';
+import ProjectDetailModal from './ProjectDetailModal'; 
 import Toast from './Toast';
 
 const Dashboard = () => {
@@ -18,8 +20,10 @@ const Dashboard = () => {
   const [searchUser, setSearchUser] = useState('');
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [showProjectListModal, setShowProjectListModal] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('info');
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
   const token = localStorage.getItem('token');
@@ -52,6 +56,25 @@ const Dashboard = () => {
       .catch(console.error);
   };
 
+  const handleDeleteProject = async (id) => {
+    if (!window.confirm('¿Eliminar este proyecto?')) return;
+
+    try {
+      await fetch(`${apiUrl}/api/projects/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setProjects(projects.filter((p) => p.id !== id));
+      setToastType('success');
+      setToastMessage('Proyecto eliminado correctamente');
+    } catch (err) {
+      console.error(err);
+      setToastType('error');
+      setToastMessage('Error al eliminar el proyecto');
+    }
+  };
+
   const handleDeleteUser = async (id) => {
     if (!window.confirm('¿Eliminar este usuario?')) return;
     await fetch(`${apiUrl}/api/users/${id}`, {
@@ -67,7 +90,7 @@ const Dashboard = () => {
 
   const commonActions = [
     { label: 'CREAR PROYECTO', onClick: () => setShowCreateProjectModal(true) },
-    { label: 'LISTAR PROYECTOS', path: '/projects' },
+    { label: 'LISTAR PROYECTOS', onClick: () => setShowProjectListModal(true) },
   ];
 
   const adminActions = [
@@ -93,9 +116,9 @@ const Dashboard = () => {
       const data = await res.json();
       if (res.ok && data.token) {
         localStorage.setItem('token', data.token);
-        setUserInfo(prev => ({ ...prev, roles: 'ROLE_USER,ROLE_CREATOR' })); // o volver a decodificar roles del nuevo token
+        setUserInfo(prev => ({ ...prev, roles: 'ROLE_USER,ROLE_CREATOR' }));
         setToastType('success');
-        setToastMessage('🎉 ¡Ahora eres creador!');
+        setToastMessage('¡Ahora eres creador!');
       } else {
         setToastType('error');
         setToastMessage('No se pudo actualizar tu rol.');
@@ -106,7 +129,6 @@ const Dashboard = () => {
       setToastMessage('Error de red');
     }
   };
-
 
   return (
     <div className={`register-container ${showCreateUserModal || showUsersModal ? 'modal-open' : ''}`}>
@@ -154,58 +176,91 @@ const Dashboard = () => {
 
           <div className="projects-grid">
             {filteredProjects.map((p) => (
-              <div key={p.id} className="project-card">
+              <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteProject(p.id);
+                  }}
+                  className="delete-project-button"
+                  title="Eliminar proyecto"
+                >
+                  ✕
+                </button>
                 <h4>{p.title}</h4>
-                <p className="project-description">{p.description}</p>
+                <div
+                  className="project-description"
+                  dangerouslySetInnerHTML={{
+                    __html: (() => {
+                      const temp = document.createElement('div');
+                      temp.innerHTML = p.description;
+                      const text = temp.textContent || temp.innerText || '';
+                      return text.length > 35
+                        ? `<p>${text.slice(0, 35)}...</p>`
+                        : `<p>${text}</p>`;
+                    })()
+                  }}
+                />
               </div>
             ))}
           </div>
+
+          {showCreateUserModal && (
+            <CreateUserModal
+              onClose={() => setShowCreateUserModal(false)}
+              onUserCreated={fetchUsers}
+            />
+          )}
+
+          {showUsersModal && (
+            <UserListModal
+              users={users}
+              onClose={() => setShowUsersModal(false)}
+              onDelete={handleDeleteUser}
+              search={searchUser}
+              setSearch={setSearchUser}
+            />
+          )}
+
+          {!userInfo.roles?.includes('ROLE_CREATOR') && (
+            <button className="become-creator-button" onClick={handleBecomeCreator}>
+              ⭐ ¡Hazte Creador!
+            </button>
+          )}
+
+          {showCreateProjectModal && (
+            <CreateProjectModal
+              onClose={() => setShowCreateProjectModal(false)}
+              onProjectCreated={() => {
+                fetch(`${apiUrl}/api/projects`, { headers: { Authorization: `Bearer ${token}` } })
+                  .then(res => res.json())
+                  .then(setProjects);
+                setShowCreateProjectModal(false);
+              }}
+            />
+          )}
+
+          {selectedProject && (
+            <ProjectDetailModal
+              project={selectedProject}
+              onClose={() => setSelectedProject(null)}
+            />
+          )}
+
+          {showProjectListModal && (
+            <ProjectListModal
+              onClose={() => setShowProjectListModal(false)}
+              onDelete={handleDeleteProject}
+            />
+          )}
+
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            onClose={() => setToastMessage('')}
+          />
         </div>
       </div>
-
-      {showCreateUserModal && (
-        <CreateUserModal
-          onClose={() => setShowCreateUserModal(false)}
-          onUserCreated={fetchUsers}
-        />
-      )}
-
-      {showUsersModal && (
-        <UserListModal
-          users={users}
-          onClose={() => setShowUsersModal(false)}
-          onDelete={handleDeleteUser}
-          search={searchUser}
-          setSearch={setSearchUser}
-        />
-      )}
-
-      {!userInfo.roles?.includes('ROLE_CREATOR') && (
-        <button
-          className="become-creator-button"
-          onClick={handleBecomeCreator}
-        >
-          ⭐ ¡Hazte Creador!
-        </button>
-      )}
-
-      {showCreateProjectModal && (
-        <CreateProjectModal
-          onClose={() => setShowCreateProjectModal(false)}
-          onProjectCreated={() => {
-            fetch(`${apiUrl}/api/projects`, { headers: { Authorization: `Bearer ${token}` } })
-              .then(res => res.json())
-              .then(setProjects);
-            setShowCreateProjectModal(false);
-          }}
-        />
-      )}
-
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        onClose={() => setToastMessage('')}
-      />
     </div>
   );
 };

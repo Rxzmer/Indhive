@@ -14,10 +14,7 @@ import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "proyectos")
-@JsonIdentityInfo(
-  generator = ObjectIdGenerators.PropertyGenerator.class,
-  property = "id"
-)
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Project {
 
     @Id
@@ -27,32 +24,23 @@ public class Project {
     @NotBlank
     private String title;
 
+    @Column(length = 2000)
     private String description;
 
     // Relación Many-to-One con User, representa al dueño del proyecto (propietario)
     @ManyToOne
-    @JoinColumn(
-        name = "owner_id",
-        nullable = false,
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(name = "fk_project_owner")
-    )
+    @JoinColumn(name = "owner_id", nullable = false, referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_project_owner"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User owner;
 
     // Relación Many-to-Many con usuarios colaboradores del proyecto
     @ManyToMany
-    @JoinTable(
-        name = "project_collaborators",
-        joinColumns = @JoinColumn(name = "project_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-        foreignKey = @ForeignKey(name = "fk_project_collaborators_project"),
-        inverseForeignKey = @ForeignKey(name = "fk_project_collaborators_user")
-    )
+    @JoinTable(name = "project_collaborators", joinColumns = @JoinColumn(name = "project_id"), inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"), foreignKey = @ForeignKey(name = "fk_project_collaborators_project"), inverseForeignKey = @ForeignKey(name = "fk_project_collaborators_user"))
     private Set<User> collaborators = new HashSet<>();
 
     // Constructores
-    public Project() {}
+    public Project() {
+    }
 
     public Project(String title, String description, User owner) {
         this.title = title;
@@ -61,23 +49,43 @@ public class Project {
     }
 
     // Getters y Setters
-    public Long getId() { return id; }
+    public Long getId() {
+        return id;
+    }
 
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getTitle() { return title; }
+    public String getTitle() {
+        return title;
+    }
 
-    public void setTitle(String title) { this.title = title; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public String getDescription() { return description; }
+    public String getDescription() {
+        return description;
+    }
 
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public User getOwner() { return owner; }
+    public User getOwner() {
+        return owner;
+    }
 
-    public void setOwner(User owner) { this.owner = owner; }
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
 
-    public Set<User> getCollaborators() { return collaborators; }
+    public Set<User> getCollaborators() {
+        return collaborators;
+    }
 
-    public void setCollaborators(Set<User> collaborators) { this.collaborators = collaborators; }
+    public void setCollaborators(Set<User> collaborators) {
+        this.collaborators = collaborators;
+    }
 }
