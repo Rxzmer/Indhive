@@ -2,14 +2,19 @@
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 9999; /* Superior a cualquier otro */
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(6px);
+}
+
+body, #root {
+  position: relative; /* Para que z-index funcione correctamente */
+  z-index: 0;
 }
 
 .modal-card {
@@ -28,8 +33,6 @@
   background-repeat: no-repeat;
   background-position: top right;
   background-size: 150px;
-  mask-image: linear-gradient(to bottom left, rgba(0,0,0,0.4), rgba(0,0,0,1));
-  -webkit-mask-image: linear-gradient(to bottom left, rgba(0,0,0,0.4), rgba(0,0,0,1));
 }
 
 .modal-title {
@@ -177,8 +180,8 @@
 }
 
 .user-tag {
-  background-color: #656f94;
-  color: #364057;
+  background-color: #f7cd44;
+  color: #4e5b75;
   border-radius: 9999px;
   padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
@@ -196,18 +199,89 @@
   border: none;
   color: #1e3a8a;
   font-weight: bold;
-  margin-left: 0.4rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-
-.user-tag button {
-  background: none;
-  border: none;
-  color: #1e3a8a;
-  font-weight: bold;
   margin-left: 0.5rem;
   cursor: pointer;
   font-size: 1rem;
+}
+
+.ql-toolbar,
+.ql-toolbar .ql-picker,
+.ql-toolbar .ql-stroke,
+.ql-toolbar .ql-fill,
+.ql-toolbar .ql-picker-label,
+.ql-toolbar .ql-picker-options,
+.ql-toolbar .ql-picker-item {
+  color: white !important;
+  border-color: white !important;
+}
+
+.ql-toolbar {
+  border: 1px solid white !important;
+  background-color: #1e1e1e !important;
+}
+
+.ql-toolbar .ql-picker-options {
+  background-color: #2c2f36 !important;
+}
+
+.ql-container {
+  border: 1px solid white !important;
+}
+
+.ql-editor {
+  background-color: #1e1e1e;
+  color: white;
+  min-height: 150px;
+}
+
+.banner-container {
+  width: 100%;
+  max-height: 200px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.project-banner {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.collaborators-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.user-tag {
+  background-color: #656f94;
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-header {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1; /* Más bajo que 9999 del modal */
+}
+
+.nav-link {
+  position: relative;
+  z-index: 5;
+  color: white;
+}
+
+.modal-overlay {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  z-index: 2147483647 !important; /* nivel extremo */
 }

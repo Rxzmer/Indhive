@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [selectedProject, setSelectedProject] = useState(null);
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
+  const isCreator = userInfo.roles?.includes('CREATOR');
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
@@ -134,7 +135,7 @@ const Dashboard = () => {
     <div className={`register-container ${showCreateUserModal || showUsersModal ? 'modal-open' : ''}`}>
       <div className="register-background" style={{ backgroundImage: `url(${background})` }} />
 
-      <div className="landing-header" style={{ zIndex: 3 }}>
+      <div className="landing-header">
         <Link to="/" onClick={handleLogout} className="nav-link">LOG OUT</Link>
       </div>
 
@@ -197,12 +198,21 @@ const Dashboard = () => {
                       const temp = document.createElement('div');
                       temp.innerHTML = p.description;
                       const text = temp.textContent || temp.innerText || '';
-                      return text.length > 35
-                        ? `<p>${text.slice(0, 35)}...</p>`
+                      return text.length > 250
+                        ? `<p>${text.slice(0, 250)}...</p>`
                         : `<p>${text}</p>`;
                     })()
                   }}
                 />
+                {Array.isArray(p.collaborators) && p.collaborators.length > 0 && (
+                  <div className="collaborators-tags">
+                    {p.collaborators.map((colab, index) => (
+                      <span key={index} className="user-tag">
+                        {colab.username || colab}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -224,7 +234,7 @@ const Dashboard = () => {
             />
           )}
 
-          {!userInfo.roles?.includes('ROLE_CREATOR') && (
+          {!isAdmin && !isCreator && (
             <button className="become-creator-button" onClick={handleBecomeCreator}>
               ⭐ ¡Hazte Creador!
             </button>

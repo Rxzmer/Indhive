@@ -12,7 +12,6 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
   const apiUrl = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
-    // Obtener usuario actual para saber si es dueño o admin
     fetch(`${apiUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -20,10 +19,11 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
       .then(user => {
         const isAdmin = user.roles?.includes('ADMIN');
         const isOwner = user.username === project.owner;
-        setCanEdit(isAdmin || isOwner);
+        const isCollaborator = project.collaborators?.some(c => c.username === user.username);
+        setCanEdit(isAdmin || isOwner || isCollaborator);
       })
       .catch(console.error);
-  }, [apiUrl, token, project.owner]);
+  }, [apiUrl, token, project.owner, project.collaborators]);
 
   const modules = {
     toolbar: [
@@ -45,7 +45,7 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
       });
 
       if (res.ok) {
-        onUpdated(); // recarga lista de proyectos
+        onUpdated();
         setIsEditing(false);
       } else {
         alert('Error al guardar');
@@ -58,6 +58,12 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        {project.bannerUrl && (
+          <div className="banner-container">
+            <img src={project.bannerUrl} alt="Project banner" className="project-banner" />
+          </div>
+        )}
+
         {canEdit && (
           <button
             className="register-close"
