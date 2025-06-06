@@ -9,7 +9,7 @@ import CreateUserModal from './CreateUserModal';
 import CreateProjectModal from './CreateProjectModal';
 import UserListModal from './UserListModal';
 import ProjectListModal from './ProjectListModal';
-import ProjectDetailModal from './ProjectDetailModal'; 
+import ProjectDetailModal from './ProjectDetailModal';
 import Toast from './Toast';
 
 const Dashboard = () => {
@@ -177,16 +177,18 @@ const Dashboard = () => {
           <div className="projects-grid">
             {filteredProjects.map((p) => (
               <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteProject(p.id);
-                  }}
-                  className="delete-project-button"
-                  title="Eliminar proyecto"
-                >
-                  ✕
-                </button>
+                {(isAdmin || p.owner === userInfo.username) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteProject(p.id);
+                    }}
+                    className="delete-project-button"
+                    title="Eliminar proyecto"
+                  >
+                    ✕
+                  </button>
+                )}
                 <h4>{p.title}</h4>
                 <div
                   className="project-description"
@@ -232,10 +234,11 @@ const Dashboard = () => {
             <CreateProjectModal
               onClose={() => setShowCreateProjectModal(false)}
               onProjectCreated={() => {
-                fetch(`${apiUrl}/api/projects`, { headers: { Authorization: `Bearer ${token}` } })
+                fetch(`${apiUrl}/api/projects`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                })
                   .then(res => res.json())
                   .then(setProjects);
-                setShowCreateProjectModal(false);
               }}
             />
           )}
@@ -244,6 +247,13 @@ const Dashboard = () => {
             <ProjectDetailModal
               project={selectedProject}
               onClose={() => setSelectedProject(null)}
+              onUpdated={() => {
+                fetch(`${apiUrl}/api/projects`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                })
+                  .then(res => res.json())
+                  .then(setProjects);
+              }}
             />
           )}
 

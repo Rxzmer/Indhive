@@ -48,11 +48,13 @@ const ProjectListModal = ({ onClose }) => {
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.title}</td>
-                  <td>{p.description}</td>
                   <td>
-                    {(p.collaborators || []).map(c => (
-                      <span key={c.id} className="user-tag">
-                        {c.username}
+                    <div dangerouslySetInnerHTML={{ __html: p.description }} />
+                  </td>
+                  <td>
+                    {(p.collaborators || []).map((c, idx) => (
+                      <span key={idx} className="user-tag">
+                        {c.username || c}
                       </span>
                     ))}
                   </td>
