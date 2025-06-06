@@ -25,18 +25,15 @@ public class User {
 
     private String email;
 
-    // Almacena roles como una cadena separada por comas
     private String roles = "ROLE_USER";
 
     private String password;
 
-    // Relación One-to-Many: el usuario es dueño de estos proyectos
-    @OneToMany(mappedBy = "owner", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "owner", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Project> ownedProjects = new HashSet<>();
 
-    // Relación Many-to-Many: el usuario colabora en estos proyectos
-    @ManyToMany(mappedBy = "collaborators", fetch = FetchType.EAGER)
-    private Set<Project> collaboratedProjects = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProjectCollaborator> collaborations = new HashSet<>();
 
     public User() {}
 
@@ -49,33 +46,19 @@ public class User {
 
     // Getters y Setters
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public void setId(Long id) { this.id = id; }
 
-    public String getUsername() {
-        return username;
-    }
+    public String getUsername() { return username; }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    public void setUsername(String username) { this.username = username; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getEmail() { return email; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getRoles() {
-        return roles;
-    }
+    public String getRoles() { return roles; }
 
     public void setRoles(String roles) {
         if (roles != null) {
@@ -87,27 +70,15 @@ public class User {
         }
     }
 
-    public String getPassword() {
-        return password;
-    }
+    public String getPassword() { return password; }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public void setPassword(String password) { this.password = password; }
 
-    public Set<Project> getOwnedProjects() {
-        return ownedProjects;
-    }
+    public Set<Project> getOwnedProjects() { return ownedProjects; }
 
-    public void setOwnedProjects(Set<Project> ownedProjects) {
-        this.ownedProjects = ownedProjects;
-    }
+    public void setOwnedProjects(Set<Project> ownedProjects) { this.ownedProjects = ownedProjects; }
 
-    public Set<Project> getCollaboratedProjects() {
-        return collaboratedProjects;
-    }
+    public Set<ProjectCollaborator> getCollaborations() { return collaborations; }
 
-    public void setCollaboratedProjects(Set<Project> collaboratedProjects) {
-        this.collaboratedProjects = collaboratedProjects;
-    }
+    public void setCollaborations(Set<ProjectCollaborator> collaborations) { this.collaborations = collaborations; }
 }

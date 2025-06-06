@@ -24,9 +24,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.Date;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -66,7 +65,7 @@ public class AuthController {
     public ResponseEntity<?> recoverPassword(@RequestBody EmailDTO emailDTO) {
         Optional<User> userOpt = userRepository.findByEmail(emailDTO.getEmail());
         if (userOpt.isPresent()) {
-            String token = jwtUtils.generateJwtToken(userOpt.get().getEmail(), userOpt.get().getRoles());
+            String token = jwtUtils.generateJwtToken(userOpt.get().getEmail(), normalizeRoles(userOpt.get().getRoles()));
             String recoveryUrl = "http://localhost:3000/reset-password?token=" + token;
 
             emailService.sendSimpleMessage(
@@ -124,7 +123,8 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Usuario no encontrado");
             }
 
-            String token = jwtUtils.generateJwtToken(email, userOpt.get().getRoles());
+            String normalizedRoles = normalizeRoles(userOpt.get().getRoles());
+            String token = jwtUtils.generateJwtToken(email, normalizedRoles);
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
@@ -179,7 +179,17 @@ public class AuthController {
             return ResponseEntity.status(404).body("Usuario no encontrado");
         }
 
-        String newToken = jwtUtils.generateJwtToken(email, userOpt.get().getRoles());
+        String normalizedRoles = normalizeRoles(userOpt.get().getRoles());
+        String newToken = jwtUtils.generateJwtToken(email, normalizedRoles);
+
         return ResponseEntity.ok(Map.of("token", newToken));
+    }
+
+    // ✅ Método privado para asegurar que los roles están bien formateados
+    private String normalizeRoles(String rawRoles) {
+        return Arrays.stream(rawRoles.split(","))
+            .map(String::trim)
+            .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+            .collect(Collectors.joining(","));
     }
 }

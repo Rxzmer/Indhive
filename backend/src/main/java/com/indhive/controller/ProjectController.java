@@ -3,12 +3,12 @@ package com.indhive.controller;
 import com.indhive.dto.ProjectDTO;
 import com.indhive.dto.ProjectRequestDTO;
 import com.indhive.model.Project;
+import com.indhive.model.ProjectCollaborator;
 import com.indhive.model.User;
 import com.indhive.service.ProjectService;
 import com.indhive.service.UserService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -56,17 +56,16 @@ public class ProjectController {
             return ResponseEntity.badRequest().body("Usuario autenticado no encontrado");
         }
 
-        Set<User> colaboradores = new HashSet<>();
-        if (dto.getCollaboratorIds() != null) {
-            colaboradores = dto.getCollaboratorIds().stream()
-                    .map(userService::obtenerUsuarioPorId)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toSet());
-        }
-
         Project nuevo = new Project(dto.getTitle(), dto.getDescription(), ownerOpt.get());
-        nuevo.setCollaborators(colaboradores);
+
+        if (dto.getCollaboratorIds() != null) {
+            for (Long userId : dto.getCollaboratorIds()) {
+                userService.obtenerUsuarioPorId(userId).ifPresent(user -> {
+                    ProjectCollaborator pc = new ProjectCollaborator(nuevo, user);
+                    nuevo.getCollaborators().add(pc);
+                });
+            }
+        }
 
         Project guardado = projectService.guardarProyecto(nuevo);
         return ResponseEntity.ok(toDTO(guardado));
@@ -74,27 +73,33 @@ public class ProjectController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody ProjectRequestDTO dto, Authentication auth) {
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody ProjectRequestDTO dto,
+                                        Authentication auth) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
-        if (proyectoOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (proyectoOpt.isEmpty())
+            return ResponseEntity.notFound().build();
 
         Project proyecto = proyectoOpt.get();
         String email = auth.getName();
 
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
-        if (!isAdmin && !isOwner) return ResponseEntity.status(403).build();
+        if (!isAdmin && !isOwner)
+            return ResponseEntity.status(403).build();
 
         proyecto.setTitle(dto.getTitle());
         proyecto.setDescription(dto.getDescription());
 
+        // Limpia colaboradores existentes y añade los nuevos
+        proyecto.getCollaborators().clear();
+
         if (dto.getCollaboratorIds() != null) {
-            Set<User> colaboradores = dto.getCollaboratorIds().stream()
-                    .map(userService::obtenerUsuarioPorId)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toSet());
-            proyecto.setCollaborators(colaboradores);
+            for (Long userId : dto.getCollaboratorIds()) {
+                userService.obtenerUsuarioPorId(userId).ifPresent(user -> {
+                    ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
+                    proyecto.getCollaborators().add(pc);
+                });
+            }
         }
 
         Project actualizado = projectService.guardarProyecto(proyecto);
@@ -105,22 +110,52 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication auth) {
         Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
-        if (proyectoOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (proyectoOpt.isEmpty())
+            return ResponseEntity.notFound().build();
 
         Project proyecto = proyectoOpt.get();
         String email = auth.getName();
 
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
-        if (!isAdmin && !isOwner) return ResponseEntity.status(403).build();
+        if (!isAdmin && !isOwner)
+            return ResponseEntity.status(403).build();
 
         projectService.eliminarProyecto(id);
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{projectId}/collaborators/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @projectSecurity.isOwnerOrCollaborator(#projectId, authentication.name)")
+    public ResponseEntity<?> eliminarColaborador(
+            @PathVariable Long projectId,
+            @PathVariable Long userId) {
+        Optional<Project> projectOpt = projectService.obtenerProyectoPorId(projectId);
+        Optional<User> userOpt = userService.obtenerUsuarioPorId(userId);
+
+        if (projectOpt.isEmpty() || userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Project project = projectOpt.get();
+
+        // Eliminar colaboración específica
+        project.getCollaborators().removeIf(pc ->
+                pc.getUser().getId().equals(userId)
+        );
+
+        projectService.guardarProyecto(project);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Colaborador eliminado correctamente",
+                "projectId", projectId,
+                "userId", userId
+        ));
+    }
+
     private ProjectDTO toDTO(Project p) {
         Set<String> collaboratorNames = p.getCollaborators().stream()
-                .map(User::getUsername)
+                .map(pc -> pc.getUser().getUsername())
                 .collect(Collectors.toSet());
 
         return new ProjectDTO(

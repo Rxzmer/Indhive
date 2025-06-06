@@ -40,68 +40,51 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private RevokedTokenRepository revokedTokenRepository;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain)
-                                    throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        String jwt = null;
-        String username = null;
+protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                @NonNull HttpServletResponse response,
+                                @NonNull FilterChain filterChain)
+                                throws ServletException, IOException {
+    final String authHeader = request.getHeader("Authorization");
+    String jwt = null;
+    String username = null;
 
-        try {
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                jwt = authHeader.substring(7);
-                logger.debug("Token recibido");
+    try {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+            logger.debug("Token recibido");
 
-                // Verificación de token revocado antes de validarlo
-                if (revokedTokenRepository.existsById(jwt)) {
-                    logger.warn("Token revocado, se ignora autenticación");
-                    filterChain.doFilter(request, response);
-                    return;
-                }
+            if (revokedTokenRepository.existsById(jwt)) {
+                logger.warn("Token revocado, se ignora autenticación");
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-                if (jwtUtils.validateJwtToken(jwt)) {
-                    username = jwtUtils.getUserNameFromJwtToken(jwt);
-                    logger.debug("Usuario extraído del token: {}", username);
-                } else {
-                    logger.warn("Token inválido");
-                }
+            if (jwtUtils.validateJwtToken(jwt)) {
+                username = jwtUtils.getUserNameFromJwtToken(jwt);
+                logger.debug("Usuario extraído del token: {}", username);
             } else {
-                logger.debug("No se recibió Authorization o no es Bearer");
+                logger.warn("Token inválido");
             }
-
-            // Autenticación si no está ya autenticado y tenemos un usuario válido
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                logger.debug("Cargando usuario desde base de datos...");
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-                String roles = jwtUtils.getRolesFromJwtToken(jwt);
-                logger.debug("Roles extraídos: {}", roles);
-
-                List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                        .map(String::trim)
-                        .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
-
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, authorities);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                logger.debug("Usuario autenticado: {}", username);
-            }
-
-        } catch (Exception e) {
-            logger.error("Error en el filtro JWT: {}", e.getMessage());
+        } else {
+            logger.debug("No se recibió Authorization o no es Bearer");
         }
 
-        filterChain.doFilter(request, response);
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            logger.debug("Cargando usuario desde base de datos...");
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            logger.debug("Usuario autenticado: {}", username);
+        }
+
+    } catch (Exception e) {
+        logger.error("Error en el filtro JWT: {}", e.getMessage());
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return path.matches("^/api/auth/(login|register|recover|reset-password)$");
-    }
-}
+    filterChain.doFilter(request, response);
+}}

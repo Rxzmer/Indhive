@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import './UserListModal.css';
 
-const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
+const UserListModal = ({
+  users,
+  onClose,
+  onDelete,
+  search,
+  setSearch,
+  onUserUpdated,
+  setToastMessage,
+  setToastType
+}) => {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ username: '', email: '', roles: '' });
 
@@ -34,13 +43,20 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
       });
 
       if (!res.ok) {
-        alert('Error al guardar los cambios');
+        const msg = await res.text();
+        if (setToastType) setToastType('error');
+        if (setToastMessage) setToastMessage(msg || 'Error al guardar los cambios');
         return;
       }
 
-      window.location.reload();
+      setEditId(null);
+      if (setToastType) setToastType('success');
+      if (setToastMessage) setToastMessage('Usuario actualizado correctamente');
+
+      if (onUserUpdated) onUserUpdated();
     } catch (err) {
-      alert('Error inesperado: ' + err.message);
+      if (setToastType) setToastType('error');
+      if (setToastMessage) setToastMessage('Error inesperado: ' + err.message);
     }
   };
 
@@ -91,10 +107,11 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
                       <select className="table-select" name="roles" value={editForm.roles} onChange={handleEditChange}>
                         <option value="ROLE_USER">Usuario</option>
                         <option value="ROLE_ADMIN">Administrador</option>
+                        <option value="ROLE_USER,ROLE_CREATOR">Creador</option>
                       </select>
                     ) : (
-                      <span className={`role-tag ${u.roles.toLowerCase()}`}>
-                        {u.roles.replace('ROLE_', '')}
+                      <span className="role-tag">
+                        {u.roles.split(',').map(r => r.replace('ROLE_', '')).join(', ')}
                       </span>
                     )}
                   </td>
@@ -131,7 +148,6 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
             </tbody>
           </table>
         </div>
-
 
       </div>
     </div>

@@ -2,9 +2,10 @@ package com.indhive.controller;
 
 import com.indhive.dto.UserDTO;
 import com.indhive.dto.UserRequestDTO;
+import com.indhive.model.Project;
 import com.indhive.model.User;
-import com.indhive.service.UserService;
 import com.indhive.security.JwtUtils;
+import com.indhive.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,15 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.HashMap;
-
-import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/users")
@@ -35,7 +32,7 @@ public class UserController {
         this.jwtUtils = jwtUtils;
     }
 
-    @Operation(summary = "Listar todos los usuarios", description = "Devuelve la lista completa de usuarios. Solo accesible para usuarios con rol ADMIN.")
+    @Operation(summary = "Listar todos los usuarios")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<UserDTO> listar() {
@@ -44,7 +41,7 @@ public class UserController {
                 .collect(Collectors.toList());
     }
 
-    @Operation(summary = "Obtener usuario por ID", description = "Devuelve la información de un usuario específico.")
+    @Operation(summary = "Obtener usuario por ID")
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> obtenerPorId(@PathVariable Long id) {
         return userService.obtenerUsuarioPorId(id)
@@ -53,7 +50,7 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Crear un nuevo usuario", description = "Solo accesible para usuarios con rol ADMIN.")
+    @Operation(summary = "Crear un nuevo usuario")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<UserDTO> crear(@Valid @RequestBody UserRequestDTO dto) {
@@ -67,46 +64,46 @@ public class UserController {
         return ResponseEntity.ok(toDTO(saved));
     }
 
-    @Operation(summary = "Actualizar un usuario existente", description = "Solo accesible para admins o el propio usuario.")
+    @Operation(summary = "Actualizar un usuario")
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> actualizar(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto,
-            Authentication auth) {
-        String emailAutenticado = auth.getName();
-
+    public ResponseEntity<UserDTO> actualizar(@PathVariable Long id,
+                                              @Valid @RequestBody UserRequestDTO dto,
+                                              Authentication auth) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
-        if (userOpt.isEmpty())
-            return ResponseEntity.notFound().build();
+        if (userOpt.isEmpty()) return ResponseEntity.notFound().build();
 
-        User u = userOpt.get();
+        User user = userOpt.get();
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isSelf = u.getEmail().equals(emailAutenticado);
+        boolean isSelf = auth.getName().equalsIgnoreCase(user.getEmail());
 
-        if (!isAdmin && !isSelf)
-            return ResponseEntity.status(403).build();
+        if (!isAdmin && !isSelf) return ResponseEntity.status(403).build();
 
-        u.setUsername(dto.getUsername());
-        u.setEmail(dto.getEmail());
+        user.setUsername(dto.getUsername());
+        user.setEmail(dto.getEmail());
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            user.setPassword(dto.getPassword());
+        }
         if (isAdmin && dto.getRoles() != null) {
-            u.setRoles(dto.getRoles());
+            user.setRoles(dto.getRoles());
         }
 
-        User actualizado = userService.actualizarUsuario(u.getId(), u);
+        User actualizado = userService.actualizarUsuario(user.getId(), user);
         return ResponseEntity.ok(toDTO(actualizado));
     }
 
-    @Operation(summary = "Eliminar un usuario", description = "Solo accesible para usuarios con rol ADMIN.")
+    @Operation(summary = "Eliminar un usuario")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        if (userService.obtenerUsuarioPorId(id).isPresent()) {
-            userService.eliminarUsuario(id);
-            return ResponseEntity.ok().build();
+        if (userService.obtenerUsuarioPorId(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
+        userService.eliminarUsuario(id);
+        return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Listar proyectos de un usuario", description = "Proyectos propios y colaboraciones.")
+    @Operation(summary = "Listar proyectos de un usuario")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}/projects")
     public ResponseEntity<Map<String, Object>> listarProyectosDeUsuario(@PathVariable Long id) {
@@ -114,41 +111,38 @@ public class UserController {
                 .map(user -> {
                     Map<String, Object> response = new HashMap<>();
                     response.put("ownedProjects", user.getOwnedProjects());
-                    response.put("collaboratedProjects", user.getCollaboratedProjects());
+                    response.put("collaboratedProjects", userService.buscarColaboraciones(user.getId()));
                     return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Cambiar mi contraseña", description = "Requiere autenticación.")
+    @Operation(summary = "Cambiar mi contraseña")
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/password")
     public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body, Authentication auth) {
-        String email = auth.getName();
-        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
-        if (userOpt.isEmpty())
-            return ResponseEntity.status(404).body("Usuario no encontrado");
-
         String nuevaPassword = body.get("password");
         if (nuevaPassword == null || nuevaPassword.isBlank()) {
             return ResponseEntity.badRequest().body("Contraseña no puede estar vacía");
         }
 
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).body("Usuario no encontrado");
+
         User user = userOpt.get();
         user.setPassword(nuevaPassword);
         userService.guardarUsuario(user);
-        return ResponseEntity.ok("Contraseña actualizada correctamente");
+
+        return ResponseEntity.ok(Collections.singletonMap("message", "Contraseña actualizada correctamente"));
     }
 
-    @Operation(summary = "Actualizar mi perfil", description = "Actualiza nombre y email del usuario autenticado.")
+    @Operation(summary = "Actualizar mi perfil")
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
     public ResponseEntity<Map<String, String>> actualizarMiPerfil(@Valid @RequestBody UserRequestDTO dto,
-            Authentication auth) {
-        String email = auth.getName();
-        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
-        if (userOpt.isEmpty())
-            return ResponseEntity.status(404).build();
+                                                                   Authentication auth) {
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).build();
 
         User user = userOpt.get();
         user.setUsername(dto.getUsername());
@@ -157,37 +151,31 @@ public class UserController {
         User actualizado = userService.actualizarUsuario(user.getId(), user);
         String nuevoToken = jwtUtils.generateJwtToken(actualizado.getEmail(), actualizado.getRoles());
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Perfil actualizado correctamente");
-        response.put("token", nuevoToken);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+                "message", "Perfil actualizado correctamente",
+                "token", nuevoToken
+        ));
     }
 
-    // Conversión manual User → UserDTO
-    private UserDTO toDTO(User u) {
-        return new UserDTO(u.getId(), u.getUsername(), u.getEmail(), u.getRoles());
-    }
-
-    @Operation(summary = "Conviértete en creador", description = "Añade el rol CREATOR al usuario autenticado.")
+    @Operation(summary = "Conviértete en creador")
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/creator")
     public ResponseEntity<Map<String, String>> convertirseEnCreador(Authentication auth) {
-        String email = auth.getName();
-        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(email);
-        if (userOpt.isEmpty())
-            return ResponseEntity.status(404).build();
+        Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).build();
 
         User user = userOpt.get();
-        String rolesActuales = user.getRoles();
-
-        if (!rolesActuales.contains("ROLE_CREATOR")) {
-            String nuevosRoles = rolesActuales + (rolesActuales.isBlank() ? "" : ",") + "ROLE_CREATOR";
+        if (!user.getRoles().contains("ROLE_CREATOR")) {
+            String nuevosRoles = user.getRoles() + ",ROLE_CREATOR";
             user.setRoles(nuevosRoles);
             userService.guardarUsuario(user);
         }
 
         String nuevoToken = jwtUtils.generateJwtToken(user.getEmail(), user.getRoles());
-
         return ResponseEntity.ok(Map.of("token", nuevoToken));
+    }
+
+    private UserDTO toDTO(User u) {
+        return new UserDTO(u.getId(), u.getUsername(), u.getEmail(), u.getRoles());
     }
 }

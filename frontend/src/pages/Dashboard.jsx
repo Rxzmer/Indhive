@@ -77,13 +77,37 @@ const Dashboard = () => {
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm('¿Eliminar este usuario?')) return;
-    await fetch(`${apiUrl}/api/users/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setUsers(users.filter((u) => u.id !== id));
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setToastType('error');
+      setToastMessage('No estás autenticado. Vuelve a iniciar sesión.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/api/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Error al eliminar usuario');
+      }
+
+      setUsers(users.filter((u) => u.id !== id));
+      setToastType('success');
+      setToastMessage('Usuario eliminado correctamente');
+    } catch (err) {
+      console.error(err);
+      setToastType('error');
+      setToastMessage(`Error al eliminar: ${err.message}`);
+    }
   };
+
 
   const filteredProjects = projects.filter((p) =>
     p.title.toLowerCase().includes(searchUser.toLowerCase())
@@ -231,6 +255,9 @@ const Dashboard = () => {
               onDelete={handleDeleteUser}
               search={searchUser}
               setSearch={setSearchUser}
+              onUserUpdated={fetchUsers}
+              setToastMessage={setToastMessage}
+              setToastType={setToastType}
             />
           )}
 

@@ -1,6 +1,7 @@
 package com.indhive.repository;
 
 import com.indhive.model.Project;
+import com.indhive.model.User;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -14,4 +15,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @org.springframework.lang.NonNull
     List<Project> findAll();
 
+    // 👇 Este es el nuevo método necesario para eliminar proyectos de un usuario
+    List<Project> findByOwner(User owner);
 }
