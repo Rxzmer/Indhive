@@ -29,17 +29,17 @@ public class JwtUtils {
         this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    public String generateJwtToken(String username, String roles) {
+    public String generateJwtToken(String email, String roles) {
         String rolesWithPrefix = normalizeRoles(roles);
 
         return Jwts.builder()
-                .setSubject(username)
-                .claim("roles", rolesWithPrefix)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + Duration.ofHours(24).toMillis()))
-                .signWith(signingKey, SignatureAlgorithm.HS512)
-                .compact();
-    }
+            .setSubject(email) // ahora usamos el email como identificador
+            .claim("roles", rolesWithPrefix)
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + Duration.ofHours(24).toMillis()))
+            .signWith(signingKey, SignatureAlgorithm.HS512)
+            .compact();
+    }  
 
     public String getUserNameFromJwtToken(String token) {
         return parseClaims(token).getSubject();

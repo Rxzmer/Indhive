@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Register.css';
 import background from '../assets/background.jpg';
 
@@ -6,6 +7,7 @@ const RecoverPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const apiUrl = process.env.REACT_APP_API_URL;
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +31,12 @@ const RecoverPassword = () => {
         style={{ backgroundImage: `url(${background})` }}
       />
       <div className="register-card">
+        <button
+          className="register-close"
+          onClick={() => navigate('/register')}
+        >
+          ✕
+        </button>
         <h2 className="register-title">Recuperar Contraseña</h2>
         <form onSubmit={handleSubmit} className="register-form">
           <input

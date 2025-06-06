@@ -93,6 +93,8 @@
   transform: scale(1.2);
 }
 
+
+
 @media (max-width: 768px) {
   .landing-columns {
     flex-direction: column;

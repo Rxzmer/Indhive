@@ -39,8 +39,17 @@ const ResetPassword = () => {
 
   return (
     <div className="register-container">
-      <div className="register-background" style={{ backgroundImage: `url(${background})` }} />
+      <div
+        className="register-background"
+        style={{ backgroundImage: `url(${background})` }}
+      />
       <div className="register-card">
+        <button
+          className="register-close"
+          onClick={() => navigate('/register')}
+        >
+          ✕
+        </button>
         <h2 className="register-title">Nueva Contraseña</h2>
         <form onSubmit={handleSubmit} className="register-form">
           <input

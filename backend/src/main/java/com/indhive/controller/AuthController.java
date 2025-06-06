@@ -9,6 +9,7 @@ import com.indhive.security.LoginAttemptService;
 import com.indhive.dto.EmailDTO;
 import com.indhive.dto.LoginRequest;
 import com.indhive.dto.ResetPasswordDTO;
+import com.indhive.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -38,11 +39,16 @@ public class AuthController {
     @Autowired private JwtUtils jwtUtils;
     @Autowired private RevokedTokenRepository revokedTokenRepository;
     @Autowired private LoginAttemptService loginAttemptService;
+    @Autowired private EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody @Valid User user) {
         if (userRepository.existsByUsername(user.getUsername())) {
             return ResponseEntity.badRequest().body("Error: Username ya está en uso");
+        }
+
+        if (userRepository.existsByEmail(user.getEmail())) {
+            return ResponseEntity.badRequest().body("Error: El correo ya está en uso");
         }
 
         if (user.getRoles() == null || user.getRoles().isBlank()) {
@@ -60,8 +66,14 @@ public class AuthController {
     public ResponseEntity<?> recoverPassword(@RequestBody EmailDTO emailDTO) {
         Optional<User> userOpt = userRepository.findByEmail(emailDTO.getEmail());
         if (userOpt.isPresent()) {
-            String token = jwtUtils.generateJwtToken(userOpt.get().getUsername(), userOpt.get().getRoles());
-            System.out.println("Enlace de recuperación: http://localhost:3000/reset-password?token=" + token);
+            String token = jwtUtils.generateJwtToken(userOpt.get().getEmail(), userOpt.get().getRoles());
+            String recoveryUrl = "http://localhost:3000/reset-password?token=" + token;
+
+            emailService.sendSimpleMessage(
+                emailDTO.getEmail(),
+                "Recuperación de contraseña - Indhive",
+                "Haz clic en este enlace para restablecer tu contraseña:\n\n" + recoveryUrl
+            );
         }
 
         return ResponseEntity.ok("Si el correo está registrado, recibirás instrucciones.");
@@ -84,12 +96,7 @@ public class AuthController {
                 revokedTokenRepository.save(new RevokedToken(dto.getToken(), new Date()));
             }
 
-            String newToken = jwtUtils.generateJwtToken(user.getEmail(), user.getRoles());
-
-            return ResponseEntity.ok(Map.of(
-                "message", "Contraseña actualizada correctamente",
-                "token", newToken
-            ));
+            return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
         } catch (Exception e) {
             return ResponseEntity.status(400).body("Token inválido o expirado");
         }

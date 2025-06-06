@@ -54,6 +54,7 @@
   border: none;
   cursor: pointer;
   transition: transform 0.2s ease;
+  z-index: 10; /* 👈 Añadido */
 }
 
 .register-close:hover {
@@ -137,3 +138,37 @@
     font-size: 1.3rem;
   }
 }
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input {
+  line-height: 1.4;
+  width: 100%;
+  padding-right: 2.5rem; 
+  box-sizing: border-box;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.9rem;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  height: 39px; /* ↑ ligeramente más alto */
+  width: 24px;
+  display: flex;
+  
+  justify-content: center;
+  color: #ccc;
+  pointer-events: auto;
+}
+
+
+
+
