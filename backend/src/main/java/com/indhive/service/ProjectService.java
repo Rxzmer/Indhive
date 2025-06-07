@@ -2,8 +2,11 @@ package com.indhive.service;
 
 import com.indhive.model.Project;
 import com.indhive.repository.ProjectRepository;
+import com.indhive.repository.ProjectCollaboratorRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +16,9 @@ public class ProjectService {
 
     @Autowired
     private ProjectRepository proyectoRepository;
+
+    @Autowired
+    private ProjectCollaboratorRepository collaboratorRepository;
 
     // rxzmer: obtiene la lista completa de proyectos
     public List<Project> listarProyectos() {
@@ -29,8 +35,17 @@ public class ProjectService {
         return proyectoRepository.save(proyecto);
     }
 
-    // rxzmer: elimina un proyecto por su ID
-    public void eliminarProyecto(Long id) {
-        proyectoRepository.deleteById(id);
-    }
+    // rxzmer: elimina un proyecto y sus relaciones
+    @Transactional
+public void eliminarProyecto(Long id) {
+    collaboratorRepository.deleteByProjectId(id);
+
+    proyectoRepository.findById(id).ifPresent(proyecto -> {
+        proyectoRepository.delete(proyecto);
+        proyectoRepository.flush();
+        System.out.println("✅ Proyecto eliminado: " + proyecto.getTitle());
+    });
+}
+
+
 }

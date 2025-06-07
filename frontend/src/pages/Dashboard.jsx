@@ -30,13 +30,17 @@ const Dashboard = () => {
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  useEffect(() => {
+  const fetchProyectos = () => {
     fetch(`${apiUrl}/api/projects`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then(setProjects)
       .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchProyectos();
 
     fetch(`${apiUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -46,7 +50,7 @@ const Dashboard = () => {
         setUserInfo({ username: data.username, email: data.email, id: data.id, roles: data.roles });
       })
       .catch(console.error);
-  }, [apiUrl, token]);
+  }, []);
 
   const fetchUsers = () => {
     fetch(`${apiUrl}/api/users`, {
@@ -61,14 +65,19 @@ const Dashboard = () => {
     if (!window.confirm('¿Eliminar este proyecto?')) return;
 
     try {
-      await fetch(`${apiUrl}/api/projects/${id}`, {
+      const res = await fetch(`${apiUrl}/api/projects/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setProjects(projects.filter((p) => p.id !== id));
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
       setToastType('success');
       setToastMessage('Proyecto eliminado correctamente');
+
+      fetchProyectos();
     } catch (err) {
       console.error(err);
       setToastType('error');
@@ -77,8 +86,6 @@ const Dashboard = () => {
   };
 
   const handleDeleteUser = async (id) => {
-    const token = localStorage.getItem('token');
-
     if (!token) {
       setToastType('error');
       setToastMessage('No estás autenticado. Vuelve a iniciar sesión.');
@@ -107,7 +114,6 @@ const Dashboard = () => {
       setToastMessage(`Error al eliminar: ${err.message}`);
     }
   };
-
 
   const filteredProjects = projects.filter((p) =>
     p.title.toLowerCase().includes(searchUser.toLowerCase())
@@ -205,6 +211,7 @@ const Dashboard = () => {
                 {(isAdmin || p.owner === userInfo.username) && (
                   <button
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       handleDeleteProject(p.id);
                     }}
@@ -270,13 +277,7 @@ const Dashboard = () => {
           {showCreateProjectModal && (
             <CreateProjectModal
               onClose={() => setShowCreateProjectModal(false)}
-              onProjectCreated={() => {
-                fetch(`${apiUrl}/api/projects`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                })
-                  .then(res => res.json())
-                  .then(setProjects);
-              }}
+              onProjectCreated={fetchProyectos}
             />
           )}
 
@@ -284,13 +285,7 @@ const Dashboard = () => {
             <ProjectDetailModal
               project={selectedProject}
               onClose={() => setSelectedProject(null)}
-              onUpdated={() => {
-                fetch(`${apiUrl}/api/projects`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                })
-                  .then(res => res.json())
-                  .then(setProjects);
-              }}
+              onUpdated={fetchProyectos}
             />
           )}
 
