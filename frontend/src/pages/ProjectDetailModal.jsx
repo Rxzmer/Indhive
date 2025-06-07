@@ -50,18 +50,25 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
   }, [apiUrl, token, project.ownerId]);
 
   // Buscar usuarios
-  const searchUsers = async (query) => {
-    if (query.length < 2) {
-      setUserSearch(prev => ({ ...prev, results: [] }));
-      return;
-    }
+  // Buscar usuarios
+const searchUsers = async (query) => {
+  if (query.length < 2) {
+    setUserSearch(prev => ({ ...prev, results: [] }));
+    return;
+  }
 
-    try {
-      const res = await fetch(`${apiUrl}/api/users?search=${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      
+  try {
+    const encodedQuery = encodeURIComponent(query);  // Asegurarnos de que el query esté bien formateado
+    const res = await fetch(`${apiUrl}/api/users?search=${encodedQuery}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    if (!res.ok) throw new Error('Error al realizar la búsqueda de usuarios');
+
+    const data = await res.json();
+
+    // Verificar que la respuesta sea un array antes de usar filter
+    if (Array.isArray(data)) {
       setUserSearch(prev => ({
         ...prev,
         results: data.filter(u => 
@@ -69,10 +76,16 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
           u.id !== project.ownerId
         )
       }));
-    } catch (err) {
-      console.error("Error searching users:", err);
+    } else {
+      console.error("La respuesta del servidor no es un array");
+      setUserSearch(prev => ({ ...prev, results: [] }));  // Manejar la situación si no es un array
     }
-  };
+  } catch (err) {
+    console.error("Error searching users:", err);
+    setUserSearch(prev => ({ ...prev, results: [] }));  // Limpiar resultados en caso de error
+  }
+};
+
 
   // Manejar cambios en el formulario
   const handleChange = (field, value) => {
@@ -92,7 +105,7 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          collaboratorIds: collaborators.map(c => c.id)
+          collaboratorIds: collaborators.map(c => c.id) // Mandamos solo los ids de los colaboradores
         })
       });
 
@@ -108,12 +121,15 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
     }
   };
 
-  // Manejar colaboradores
+  // Manejar agregar colaborador
   const handleAddCollaborator = (user) => {
-    setCollaborators(prev => [...prev, user]);
+    if (!collaborators.some(c => c.id === user.id)) { // Asegura que no se agregue un duplicado
+      setCollaborators(prev => [...prev, user]);
+    }
     setUserSearch(prev => ({ ...prev, query: '', results: [] }));
   };
 
+  // Manejar eliminar colaborador
   const handleRemoveCollaborator = async (userId) => {
     try {
       await fetch(`${apiUrl}/api/projects/${project.id}/collaborators/${userId}`, {

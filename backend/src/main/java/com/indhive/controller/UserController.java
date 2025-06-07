@@ -32,8 +32,7 @@ public class UserController {
         this.jwtUtils = jwtUtils;
     }
 
-    @Operation(summary = "Listar todos los usuarios")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public List<UserDTO> listar() {
         return userService.listarUsuarios().stream()
@@ -68,16 +67,18 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> actualizar(@PathVariable Long id,
-                                              @Valid @RequestBody UserRequestDTO dto,
-                                              Authentication auth) {
+            @Valid @RequestBody UserRequestDTO dto,
+            Authentication auth) {
         Optional<User> userOpt = userService.obtenerUsuarioPorId(id);
-        if (userOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (userOpt.isEmpty())
+            return ResponseEntity.notFound().build();
 
         User user = userOpt.get();
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isSelf = auth.getName().equalsIgnoreCase(user.getEmail());
 
-        if (!isAdmin && !isSelf) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (!isAdmin && !isSelf)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         // Usamos el servicio para actualizar el usuario de manera segura
         User actualizado = userService.actualizarUsuario(id, dto, isAdmin);
@@ -119,7 +120,8 @@ public class UserController {
         }
 
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(404).body("Usuario no encontrado");
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).body("Usuario no encontrado");
 
         User user = userOpt.get();
         user.setPassword(nuevaPassword);
@@ -132,9 +134,10 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
     public ResponseEntity<Map<String, String>> actualizarMiPerfil(@Valid @RequestBody UserRequestDTO dto,
-                                                                   Authentication auth) {
+            Authentication auth) {
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(404).build();
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).build();
 
         // Usamos el servicio para actualizar el usuario de manera segura
         User actualizado = userService.actualizarUsuario(userOpt.get().getId(), dto, false);
@@ -142,8 +145,7 @@ public class UserController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Perfil actualizado correctamente",
-                "token", nuevoToken
-        ));
+                "token", nuevoToken));
     }
 
     @Operation(summary = "Conviértete en creador")
@@ -151,7 +153,8 @@ public class UserController {
     @PutMapping("/me/creator")
     public ResponseEntity<Map<String, String>> convertirseEnCreador(Authentication auth) {
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(404).build();
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).build();
 
         User user = userOpt.get();
         if (!user.getRoles().contains("ROLE_CREATOR")) {

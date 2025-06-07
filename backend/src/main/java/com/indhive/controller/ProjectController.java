@@ -28,7 +28,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final UserService userService;
-    
+
     public ProjectController(ProjectService projectService, UserService userService) {
         this.projectService = projectService;
         this.userService = userService;
@@ -76,61 +76,60 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-@PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-public ResponseEntity<?> actualizar(
-        @PathVariable Long id,
-        @Valid @RequestBody ProjectRequestDTO dto,
-        Authentication auth) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
+    public ResponseEntity<?> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody ProjectRequestDTO dto,
+            Authentication auth) {
 
-    // Obtener proyecto
-    Project proyecto = projectService.obtenerProyectoPorId(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // Obtener proyecto
+        Project proyecto = projectService.obtenerProyectoPorId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-    // Verificar permisos: si es ADMIN o propietario
-    String email = auth.getName();
-    boolean isAdmin = auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
+        // Verificar permisos: si es ADMIN o propietario
+        String email = auth.getName();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
 
-    // Solo los ADMIN o el propietario pueden editar
-    if (!isAdmin && !isOwner) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para editar este proyecto");
+        // Solo los ADMIN o el propietario pueden editar
+        if (!isAdmin && !isOwner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para editar este proyecto");
+        }
+
+        // Actualizar proyecto
+        proyecto.setTitle(dto.getTitle());
+        proyecto.setDescription(dto.getDescription());
+
+        // Manejo de colaboradores
+        if (dto.getCollaboratorIds() != null) {
+            Set<Long> nuevosIds = new HashSet<>(dto.getCollaboratorIds());
+
+            // Eliminar colaboradores que ya no están
+            proyecto.getCollaborators().removeIf(pc -> !nuevosIds.contains(pc.getUser().getId()) &&
+                    !pc.getUser().getId().equals(proyecto.getOwner().getId()));
+
+            // Añadir nuevos colaboradores
+            Set<Long> idsActuales = proyecto.getCollaborators().stream()
+                    .map(pc -> pc.getUser().getId())
+                    .collect(Collectors.toSet());
+
+            dto.getCollaboratorIds().stream()
+                    .filter(userId -> !idsActuales.contains(userId))
+                    .forEach(userId -> userService.obtenerUsuarioPorId(userId)
+                            .ifPresent(user -> {
+                                if (!user.getId().equals(proyecto.getOwner().getId())) {
+                                    ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
+                                    proyecto.getCollaborators().add(pc);
+                                }
+
+                            }));
+        }
+
+        // Guardar y retornar
+        Project actualizado = projectService.guardarProyecto(proyecto);
+        return ResponseEntity.ok(toDTO(actualizado));
     }
-
-    // Actualizar proyecto
-    proyecto.setTitle(dto.getTitle());
-    proyecto.setDescription(dto.getDescription());
-
-    // Manejo de colaboradores
-    if (dto.getCollaboratorIds() != null) {
-        Set<Long> nuevosIds = new HashSet<>(dto.getCollaboratorIds());
-
-        // Eliminar colaboradores que ya no están
-        proyecto.getCollaborators().removeIf(pc -> !nuevosIds.contains(pc.getUser().getId()) &&
-                !pc.getUser().getId().equals(proyecto.getOwner().getId()));
-
-        // Añadir nuevos colaboradores
-        Set<Long> idsActuales = proyecto.getCollaborators().stream()
-                .map(pc -> pc.getUser().getId())
-                .collect(Collectors.toSet());
-
-        dto.getCollaboratorIds().stream()
-                .filter(userId -> !idsActuales.contains(userId))
-                .forEach(userId -> userService.obtenerUsuarioPorId(userId)
-                        .ifPresent(user -> {
-                            if (!user.getId().equals(proyecto.getOwner().getId())) {
-                                ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
-                                proyecto.getCollaborators().add(pc);
-                            }
-                        }));
-    }
-
-    // Guardar y retornar
-    Project actualizado = projectService.guardarProyecto(proyecto);
-    return ResponseEntity.ok(toDTO(actualizado));
-}
-
-
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
