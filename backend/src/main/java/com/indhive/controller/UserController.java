@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -76,18 +77,10 @@ public class UserController {
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isSelf = auth.getName().equalsIgnoreCase(user.getEmail());
 
-        if (!isAdmin && !isSelf) return ResponseEntity.status(403).build();
+        if (!isAdmin && !isSelf) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        user.setUsername(dto.getUsername());
-        user.setEmail(dto.getEmail());
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            user.setPassword(dto.getPassword());
-        }
-        if (isAdmin && dto.getRoles() != null) {
-            user.setRoles(dto.getRoles());
-        }
-
-        User actualizado = userService.actualizarUsuario(user.getId(), user);
+        // Usamos el servicio para actualizar el usuario de manera segura
+        User actualizado = userService.actualizarUsuario(id, dto, isAdmin);
         return ResponseEntity.ok(toDTO(actualizado));
     }
 
@@ -143,11 +136,8 @@ public class UserController {
         Optional<User> userOpt = userService.obtenerUsuarioPorEmail(auth.getName());
         if (userOpt.isEmpty()) return ResponseEntity.status(404).build();
 
-        User user = userOpt.get();
-        user.setUsername(dto.getUsername());
-        user.setEmail(dto.getEmail());
-
-        User actualizado = userService.actualizarUsuario(user.getId(), user);
+        // Usamos el servicio para actualizar el usuario de manera segura
+        User actualizado = userService.actualizarUsuario(userOpt.get().getId(), dto, false);
         String nuevoToken = jwtUtils.generateJwtToken(actualizado.getEmail(), actualizado.getRoles());
 
         return ResponseEntity.ok(Map.of(

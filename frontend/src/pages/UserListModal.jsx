@@ -110,9 +110,11 @@ const UserListModal = ({
                         <option value="ROLE_USER,ROLE_CREATOR">Creador</option>
                       </select>
                     ) : (
-                      <span className="role-tag">
-                        {u.roles.split(',').map(r => r.replace('ROLE_', '')).join(', ')}
-                      </span>
+                      <div className="role-tags">
+                        {u.roles.split(',').map(r => (
+                          <span key={r} className="role-tag">{r.replace('ROLE_', '')}</span>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td>

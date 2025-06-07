@@ -1,19 +1,19 @@
 package com.indhive.controller;
 
-import com.indhive.model.RevokedToken;
-import com.indhive.model.User;
-import com.indhive.repository.UserRepository;
-import com.indhive.repository.RevokedTokenRepository;
-import com.indhive.security.JwtUtils;
-import com.indhive.security.LoginAttemptService;
 import com.indhive.dto.EmailDTO;
 import com.indhive.dto.LoginRequest;
 import com.indhive.dto.ResetPasswordDTO;
+import com.indhive.dto.UserDTO;
+import com.indhive.model.RevokedToken;
+import com.indhive.model.User;
+import com.indhive.repository.RevokedTokenRepository;
+import com.indhive.repository.UserRepository;
+import com.indhive.security.JwtUtils;
+import com.indhive.security.LoginAttemptService;
 import com.indhive.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +58,7 @@ public class AuthController {
         User savedUser = userRepository.save(user);
         savedUser.setPassword(null); // limpiar hash antes de devolver
 
-        return ResponseEntity.ok(savedUser);
+        return ResponseEntity.ok(new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRoles()));
     }
 
     @PostMapping("/recover")
@@ -149,8 +149,7 @@ public class AuthController {
         }
 
         User user = userOpt.get();
-        user.setPassword(null);
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles()));
     }
 
     @PostMapping("/logout")
@@ -185,7 +184,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("token", newToken));
     }
 
-    // ✅ Método privado para asegurar que los roles están bien formateados
     private String normalizeRoles(String rawRoles) {
         return Arrays.stream(rawRoles.split(","))
             .map(String::trim)

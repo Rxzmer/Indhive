@@ -46,7 +46,7 @@ const ResetPassword = () => {
       <div className="register-card">
         <button
           className="register-close"
-          onClick={() => navigate('/register')}
+          onClick={() => navigate('/login')}
         >
           ✕
         </button>

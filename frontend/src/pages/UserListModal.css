@@ -60,12 +60,13 @@
 }
 
 .role-tag {
-  padding: 4px 8px;
-  border-radius: 12px;
+  background-color: #5e7d9b;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-  text-transform: capitalize;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
 }
 
 .role-tag.role_user {

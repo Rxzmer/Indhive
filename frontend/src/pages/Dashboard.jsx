@@ -223,6 +223,7 @@ const Dashboard = () => {
           </div>
 
           <h2 className="dashboard-title">{userInfo.username.toUpperCase()}</h2>
+            {isAdmin && <span className="admin-tag">Admin</span>}
           <p className="dashboard-info">{userInfo.email}</p>
 
           <div className="dashboard-button-group">
