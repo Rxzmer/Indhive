@@ -9,10 +9,14 @@ import com.indhive.service.ProjectService;
 import com.indhive.service.UserService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,7 +28,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final UserService userService;
-
+    
     public ProjectController(ProjectService projectService, UserService userService) {
         this.projectService = projectService;
         this.userService = userService;
@@ -72,39 +76,61 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody ProjectRequestDTO dto,
-                                        Authentication auth) {
-        Optional<Project> proyectoOpt = projectService.obtenerProyectoPorId(id);
-        if (proyectoOpt.isEmpty())
-            return ResponseEntity.notFound().build();
+@PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
+public ResponseEntity<?> actualizar(
+        @PathVariable Long id,
+        @Valid @RequestBody ProjectRequestDTO dto,
+        Authentication auth) {
 
-        Project proyecto = proyectoOpt.get();
-        String email = auth.getName();
+    // Obtener proyecto
+    Project proyecto = projectService.obtenerProyectoPorId(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
-        if (!isAdmin && !isOwner)
-            return ResponseEntity.status(403).build();
+    // Verificar permisos: si es ADMIN o propietario
+    String email = auth.getName();
+    boolean isAdmin = auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
 
-        proyecto.setTitle(dto.getTitle());
-        proyecto.setDescription(dto.getDescription());
-
-        // Limpia colaboradores existentes y añade los nuevos
-        proyecto.getCollaborators().clear();
-
-        if (dto.getCollaboratorIds() != null) {
-            for (Long userId : dto.getCollaboratorIds()) {
-                userService.obtenerUsuarioPorId(userId).ifPresent(user -> {
-                    ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
-                    proyecto.getCollaborators().add(pc);
-                });
-            }
-        }
-
-        Project actualizado = projectService.guardarProyecto(proyecto);
-        return ResponseEntity.ok(toDTO(actualizado));
+    // Solo los ADMIN o el propietario pueden editar
+    if (!isAdmin && !isOwner) {
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para editar este proyecto");
     }
+
+    // Actualizar proyecto
+    proyecto.setTitle(dto.getTitle());
+    proyecto.setDescription(dto.getDescription());
+
+    // Manejo de colaboradores
+    if (dto.getCollaboratorIds() != null) {
+        Set<Long> nuevosIds = new HashSet<>(dto.getCollaboratorIds());
+
+        // Eliminar colaboradores que ya no están
+        proyecto.getCollaborators().removeIf(pc -> !nuevosIds.contains(pc.getUser().getId()) &&
+                !pc.getUser().getId().equals(proyecto.getOwner().getId()));
+
+        // Añadir nuevos colaboradores
+        Set<Long> idsActuales = proyecto.getCollaborators().stream()
+                .map(pc -> pc.getUser().getId())
+                .collect(Collectors.toSet());
+
+        dto.getCollaboratorIds().stream()
+                .filter(userId -> !idsActuales.contains(userId))
+                .forEach(userId -> userService.obtenerUsuarioPorId(userId)
+                        .ifPresent(user -> {
+                            if (!user.getId().equals(proyecto.getOwner().getId())) {
+                                ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
+                                proyecto.getCollaborators().add(pc);
+                            }
+                        }));
+    }
+
+    // Guardar y retornar
+    Project actualizado = projectService.guardarProyecto(proyecto);
+    return ResponseEntity.ok(toDTO(actualizado));
+}
+
+
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
@@ -125,6 +151,13 @@ public class ProjectController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Elimina un colaborador de un proyecto.
+     * 
+     * @param projectId ID del proyecto
+     * @param userId    ID del colaborador
+     * @return Respuesta HTTP con el resultado de la operación
+     */
     @DeleteMapping("/{projectId}/collaborators/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectSecurity.isOwnerOrCollaborator(#projectId, authentication.name)")
     public ResponseEntity<?> eliminarColaborador(
@@ -137,20 +170,16 @@ public class ProjectController {
             return ResponseEntity.notFound().build();
         }
 
-        Project project = projectOpt.get();
-
-        // Eliminar colaboración específica
-        project.getCollaborators().removeIf(pc ->
-                pc.getUser().getId().equals(userId)
-        );
-
-        projectService.guardarProyecto(project);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Colaborador eliminado correctamente",
-                "projectId", projectId,
-                "userId", userId
-        ));
+        try {
+            // Llamar al servicio para eliminar el colaborador
+            projectService.eliminarColaborador(projectId, userId);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Colaborador eliminado correctamente",
+                    "projectId", projectId,
+                    "userId", userId));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Error al eliminar colaborador");
+        }
     }
 
     private ProjectDTO toDTO(Project p) {
@@ -162,8 +191,8 @@ public class ProjectController {
                 p.getId(),
                 p.getTitle(),
                 p.getDescription(),
+                p.getOwner().getId(),
                 p.getOwner().getUsername(),
-                collaboratorNames
-        );
+                collaboratorNames);
     }
 }

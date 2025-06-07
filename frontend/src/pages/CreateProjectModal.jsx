@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -17,6 +17,19 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
 
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
+
+  // Debounce para la búsqueda de usuarios
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (query.trim().length >= 2) {
+        handleUserSearch(query);
+      } else {
+        setUserSuggestions([]);
+      }
+    }, 500); // Retraso de 500ms para evitar múltiples solicitudes al escribir
+
+    return () => clearTimeout(timeoutId); // Limpiar el timeout si cambia el query
+  }, [query]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -118,7 +131,7 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
               type="text"
               placeholder="Buscar usuarios colaboradores"
               value={query}
-              onChange={(e) => handleUserSearch(e.target.value)}
+              onChange={(e) => setQuery(e.target.value)}
             />
             {userSuggestions.length > 0 && (
               <ul className="suggestions-list">
@@ -130,7 +143,13 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
             <div className="selected-users">
               {selectedUsers.map(u => (
                 <span key={u.id} className="user-tag">
-                  {u.username} <button onClick={() => removeUser(u.id)}>x</button>
+                  {u.username} 
+                  <button 
+                    onClick={() => removeUser(u.id)} 
+                    disabled={loading} // Deshabilitar si la creación está en proceso
+                  >
+                    x
+                  </button>
                 </span>
               ))}
             </div>

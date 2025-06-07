@@ -58,4 +58,15 @@ public class ProjectService {
         // 4. Forzar sincronización con la base de datos
         entityManager.flush();
     }
+
+    /**
+     * Elimina un colaborador de un proyecto.
+     * 
+     * @param projectId ID del proyecto
+     * @param userId ID del colaborador
+     */
+    public void eliminarColaborador(Long projectId, Long userId) {
+        // Elimina la relación entre el proyecto y el colaborador en la tabla intermedia
+        proyectoRepository.deleteCollaborator(projectId, userId);
+    }
 }

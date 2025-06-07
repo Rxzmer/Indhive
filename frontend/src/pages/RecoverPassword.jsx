@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Register.css';
 import background from '../assets/background.jpg';
+import Footer from './Footer';
 
 const RecoverPassword = () => {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ const RecoverPassword = () => {
       <div className="register-card">
         <button
           className="register-close"
-          onClick={() => navigate('/register')}
+          onClick={() => navigate('/login')}
         >
           ✕
         </button>
@@ -52,6 +53,7 @@ const RecoverPassword = () => {
         </form>
         {message && <p style={{ marginTop: '1rem', color: 'white' }}>{message}</p>}
       </div>
+      <Footer />
     </div>
   );
 };

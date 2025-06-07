@@ -9,6 +9,7 @@ import CreateUserModal from './CreateUserModal';
 import CreateProjectModal from './CreateProjectModal';
 import UserListModal from './UserListModal';
 import ProjectListModal from './ProjectListModal';
+import Footer from './Footer';
 import ProjectDetailModal from './ProjectDetailModal';
 import Toast from './Toast';
 
@@ -25,30 +26,28 @@ const Dashboard = () => {
   const [toastType, setToastType] = useState('info');
   const [selectedProject, setSelectedProject] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [showOwnProjects, setShowOwnProjects] = useState(false);  // Estado para alternar visibilidad de proyectos
 
-  const isAdmin = userInfo.roles?.includes('ADMIN');
+  const isAdmin = userInfo.roles?.includes('ROLE_ADMIN');
   const isCreator = userInfo.roles?.includes('CREATOR');
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
   const fetchProyectos = useCallback(() => {
-  fetch(`${apiUrl}/api/projects`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      // Elimina esta línea que usa 'id' no declarado
-      // console.log('Intentando eliminar proyecto con ID:', id);
-      console.log('📦 Proyectos desde backend: ', data);
-      setProjects(data);
+    fetch(`${apiUrl}/api/projects`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
-    .catch((err) => {
-      console.error('Error al cargar proyectos:', err);
-      setToastType('error');
-      setToastMessage('No se pudieron cargar los proyectos');
-    });
-}, [apiUrl, token]);
-
+      .then((res) => res.json())
+      .then((data) => {
+        setProjects(data);
+      })
+      .catch((err) => {
+        setToastType('error');
+        setToastMessage('No se pudieron cargar los proyectos');
+      });
+  }, [apiUrl, token]);
 
   useEffect(() => {
     fetch(`${apiUrl}/api/auth/me`, {
@@ -60,7 +59,6 @@ const Dashboard = () => {
         fetchProyectos();
       })
       .catch(err => {
-        console.error('Error al obtener información de usuario:', err);
         setToastType('error');
         setToastMessage('No se pudo cargar la información del usuario');
       });
@@ -73,59 +71,68 @@ const Dashboard = () => {
       .then((res) => res.json())
       .then(setUsers)
       .catch((err) => {
-        console.error('Error al cargar usuarios:', err);
         setToastType('error');
         setToastMessage('No se pudieron cargar los usuarios');
       });
   };
 
-  const handleDeleteProject = async (id) => {
-  if (!window.confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.')) return;
+  // Filtrar proyectos para mostrar los propios o todos los proyectos
+  const filteredProjects = showOwnProjects
+    ? projects.filter((p) => p.ownerUsername === userInfo.username)  // Filtra proyectos del usuario
+    : projects.filter((p) => p.title.toLowerCase().includes(searchUser.toLowerCase())); // Todos los proyectos
 
-  setDeletingProjectId(id);
+  const handleDeleteProject = (id) => {
+    setShowConfirmModal(true);
+    setProjectToDelete(id);
+  };
 
-  try {
-    const res = await fetch(`${apiUrl}/api/projects/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const confirmDeleteProject = async () => {
+    if (!projectToDelete) return;
 
-    if (!res.ok) {
-      // Intentamos leer el cuerpo solo si existe
-      let errorMsg = 'Error desconocido al eliminar el proyecto';
-      try {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await res.json();
-          errorMsg = errorData.message || errorMsg;
-        } else {
-          errorMsg = await res.text() || errorMsg;
+    setDeletingProjectId(projectToDelete);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/projects/${projectToDelete}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        let errorMsg = 'Error desconocido al eliminar el proyecto';
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await res.json();
+            errorMsg = errorData.message || errorMsg;
+          } else {
+            errorMsg = await res.text() || errorMsg;
+          }
+        } catch {
+          // No hay contenido o error al leer
         }
-      } catch {
-        // No hay contenido o error al leer
+        throw new Error(errorMsg);
       }
-      throw new Error(errorMsg);
+
+      setProjects(prev => prev.filter(project => project.id !== projectToDelete));
+      setToastType('success');
+      setToastMessage('Proyecto eliminado correctamente');
+
+      fetchProyectos();
+    } catch (err) {
+      setToastType('error');
+      setToastMessage(`Error al eliminar el proyecto: ${err.message}`);
+      fetchProyectos();
+    } finally {
+      setDeletingProjectId(null);
+      setShowConfirmModal(false);
+      setProjectToDelete(null);
     }
+  };
 
-    // Eliminación optimista en frontend
-    setProjects(prev => prev.filter(project => project.id !== id));
-    setToastType('success');
-    setToastMessage('Proyecto eliminado correctamente');
-
-    // Refrescar para asegurar sincronía con backend
-    fetchProyectos();
-  } catch (err) {
-    console.error('Fallo al eliminar proyecto:', err);
-    setToastType('error');
-    setToastMessage(`Error al eliminar el proyecto: ${err.message}`);
-
-    // Recarga para evitar desincronización visual
-    fetchProyectos();
-  } finally {
-    setDeletingProjectId(null);
-  }
-};
-
+  const cancelDeleteProject = () => {
+    setShowConfirmModal(false);
+    setProjectToDelete(null);
+  };
 
   const handleDeleteUser = async (id) => {
     if (!token) {
@@ -149,15 +156,14 @@ const Dashboard = () => {
       setToastType('success');
       setToastMessage('Usuario eliminado correctamente');
     } catch (err) {
-      console.error(err);
       setToastType('error');
       setToastMessage(`Error al eliminar: ${err.message}`);
     }
   };
 
-  const filteredProjects = projects.filter((p) =>
-    p.title.toLowerCase().includes(searchUser.toLowerCase())
-  );
+  const toggleShowOwnProjects = () => {
+    setShowOwnProjects(!showOwnProjects);  // Alterna entre mostrar los proyectos del usuario o todos
+  };
 
   const commonActions = [
     { label: 'CREAR PROYECTO', onClick: () => setShowCreateProjectModal(true) },
@@ -195,7 +201,6 @@ const Dashboard = () => {
         setToastMessage('No se pudo actualizar tu rol.');
       }
     } catch (err) {
-      console.error(err);
       setToastType('error');
       setToastMessage('Error de red');
     }
@@ -209,7 +214,7 @@ const Dashboard = () => {
         <Link to="/" onClick={handleLogout} className="nav-link">LOG OUT</Link>
         <input
           type="text"
-          placeholder="Buscar..."
+          placeholder="Buscar proyectos..."
           value={searchUser}
           onChange={(e) => setSearchUser(e.target.value)}
           className="register-input search-input"
@@ -223,10 +228,17 @@ const Dashboard = () => {
           </div>
 
           <h2 className="dashboard-title">{userInfo.username.toUpperCase()}</h2>
-            {isAdmin && <span className="admin-tag">Admin</span>}
+          {isAdmin && <span className="admin-tag">Admin</span>}
           <p className="dashboard-info">{userInfo.email}</p>
 
           <div className="dashboard-button-group">
+            {/* Botón para alternar entre ver proyectos propios y todos los proyectos */}
+            <button
+              onClick={toggleShowOwnProjects}  // Alterna entre ver proyectos propios y todos los proyectos
+              className="register-button dashboard-button"
+            >
+              {showOwnProjects ? '[PROYECTOS INDHIVE ]' : '[ MIS PROYECTOS ]'}  {/* Usando íconos ASCII */}
+            </button>
             {[...commonActions, ...(isAdmin ? adminActions : [])].map((btn, index) => (
               <button
                 key={index}
@@ -249,14 +261,13 @@ const Dashboard = () => {
           <div className="projects-grid">
             {filteredProjects.map((p) => (
               <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
+                {/* La X de eliminación solo se muestra al ADMIN y al propietario del proyecto */}
                 {(isAdmin || p.ownerUsername === userInfo.username) && (
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (!deletingProjectId) {
-                        handleDeleteProject(p.id);
-                      }
+                      handleDeleteProject(p.id);
                     }}
                     className="delete-project-button"
                     title="Eliminar proyecto"
@@ -279,13 +290,6 @@ const Dashboard = () => {
                     })()
                   }}
                 />
-                {Array.isArray(p.collaboratorUsernames) && p.collaboratorUsernames.length > 0 && (
-                  <div className="collaborators-tags">
-                    {p.collaboratorUsernames.map((colab, index) => (
-                      <span key={index} className="user-tag">{colab}</span>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -335,6 +339,17 @@ const Dashboard = () => {
             />
           )}
 
+          {/* Modal de confirmación de eliminación */}
+          {showConfirmModal && (
+            <div className="confirm-delete-modal">
+              <div className="modal-content">
+                <h4>¿Estás seguro de que deseas eliminar este proyecto?</h4>
+                <button onClick={confirmDeleteProject} className="register-button">Aceptar</button>
+                <button onClick={cancelDeleteProject} className="register-button cancel-button">Cancelar</button>
+              </div>
+            </div>
+          )}
+
           <Toast
             message={toastMessage}
             type={toastType}
@@ -342,6 +357,7 @@ const Dashboard = () => {
           />
         </div>
       </div>
+      <Footer position="left" />
     </div>
   );
 };
