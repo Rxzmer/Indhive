@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import './Register.css';
 import './Dashboard.css';
 import './Modal.css';
@@ -24,33 +24,47 @@ const Dashboard = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('info');
   const [selectedProject, setSelectedProject] = useState(null);
+  const [deletingProjectId, setDeletingProjectId] = useState(null);
 
   const isAdmin = userInfo.roles?.includes('ADMIN');
   const isCreator = userInfo.roles?.includes('CREATOR');
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  const fetchProyectos = () => {
-    fetch(`${apiUrl}/api/projects`, {
-      headers: { Authorization: `Bearer ${token}` },
+  const fetchProyectos = useCallback(() => {
+  fetch(`${apiUrl}/api/projects`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      // Elimina esta línea que usa 'id' no declarado
+      // console.log('Intentando eliminar proyecto con ID:', id);
+      console.log('📦 Proyectos desde backend: ', data);
+      setProjects(data);
     })
-      .then((res) => res.json())
-      .then(setProjects)
-      .catch(console.error);
-  };
+    .catch((err) => {
+      console.error('Error al cargar proyectos:', err);
+      setToastType('error');
+      setToastMessage('No se pudieron cargar los proyectos');
+    });
+}, [apiUrl, token]);
+
 
   useEffect(() => {
-    fetchProyectos();
-
     fetch(`${apiUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then(data => {
         setUserInfo({ username: data.username, email: data.email, id: data.id, roles: data.roles });
+        fetchProyectos();
       })
-      .catch(console.error);
-  }, []);
+      .catch(err => {
+        console.error('Error al obtener información de usuario:', err);
+        setToastType('error');
+        setToastMessage('No se pudo cargar la información del usuario');
+      });
+  }, [apiUrl, token, fetchProyectos]);
 
   const fetchUsers = () => {
     fetch(`${apiUrl}/api/users`, {
@@ -58,32 +72,60 @@ const Dashboard = () => {
     })
       .then((res) => res.json())
       .then(setUsers)
-      .catch(console.error);
+      .catch((err) => {
+        console.error('Error al cargar usuarios:', err);
+        setToastType('error');
+        setToastMessage('No se pudieron cargar los usuarios');
+      });
   };
 
   const handleDeleteProject = async (id) => {
-    if (!window.confirm('¿Eliminar este proyecto?')) return;
+  if (!window.confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.')) return;
 
-    try {
-      const res = await fetch(`${apiUrl}/api/projects/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  setDeletingProjectId(id);
 
-      if (!res.ok) {
-        throw new Error(await res.text());
+  try {
+    const res = await fetch(`${apiUrl}/api/projects/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      // Intentamos leer el cuerpo solo si existe
+      let errorMsg = 'Error desconocido al eliminar el proyecto';
+      try {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          errorMsg = errorData.message || errorMsg;
+        } else {
+          errorMsg = await res.text() || errorMsg;
+        }
+      } catch {
+        // No hay contenido o error al leer
       }
-
-      setToastType('success');
-      setToastMessage('Proyecto eliminado correctamente');
-
-      fetchProyectos();
-    } catch (err) {
-      console.error(err);
-      setToastType('error');
-      setToastMessage('Error al eliminar el proyecto');
+      throw new Error(errorMsg);
     }
-  };
+
+    // Eliminación optimista en frontend
+    setProjects(prev => prev.filter(project => project.id !== id));
+    setToastType('success');
+    setToastMessage('Proyecto eliminado correctamente');
+
+    // Refrescar para asegurar sincronía con backend
+    fetchProyectos();
+  } catch (err) {
+    console.error('Fallo al eliminar proyecto:', err);
+    setToastType('error');
+    setToastMessage(`Error al eliminar el proyecto: ${err.message}`);
+
+    // Recarga para evitar desincronización visual
+    fetchProyectos();
+  } finally {
+    setDeletingProjectId(null);
+  }
+};
+
 
   const handleDeleteUser = async (id) => {
     if (!token) {
@@ -95,9 +137,7 @@ const Dashboard = () => {
     try {
       const res = await fetch(`${apiUrl}/api/users/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!res.ok) {
@@ -190,7 +230,7 @@ const Dashboard = () => {
               <button
                 key={index}
                 className="register-button dashboard-button"
-                onClick={btn.onClick || (() => window.location.href = btn.path)}
+                onClick={btn.onClick}
               >
                 {btn.label}
               </button>
@@ -208,17 +248,20 @@ const Dashboard = () => {
           <div className="projects-grid">
             {filteredProjects.map((p) => (
               <div key={p.id} className="project-card" onClick={() => setSelectedProject(p)}>
-                {(isAdmin || p.owner === userInfo.username) && (
+                {(isAdmin || p.ownerUsername === userInfo.username) && (
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleDeleteProject(p.id);
+                      if (!deletingProjectId) {
+                        handleDeleteProject(p.id);
+                      }
                     }}
                     className="delete-project-button"
                     title="Eliminar proyecto"
+                    disabled={deletingProjectId === p.id}
                   >
-                    ✕
+                    {deletingProjectId === p.id ? '⏳' : '✕'}
                   </button>
                 )}
                 <h4>{p.title}</h4>
@@ -235,12 +278,10 @@ const Dashboard = () => {
                     })()
                   }}
                 />
-                {Array.isArray(p.collaborators) && p.collaborators.length > 0 && (
+                {Array.isArray(p.collaboratorUsernames) && p.collaboratorUsernames.length > 0 && (
                   <div className="collaborators-tags">
-                    {p.collaborators.map((colab, index) => (
-                      <span key={index} className="user-tag">
-                        {colab.username || colab}
-                      </span>
+                    {p.collaboratorUsernames.map((colab, index) => (
+                      <span key={index} className="user-tag">{colab}</span>
                     ))}
                   </div>
                 )}
@@ -249,10 +290,7 @@ const Dashboard = () => {
           </div>
 
           {showCreateUserModal && (
-            <CreateUserModal
-              onClose={() => setShowCreateUserModal(false)}
-              onUserCreated={fetchUsers}
-            />
+            <CreateUserModal onClose={() => setShowCreateUserModal(false)} onUserCreated={fetchUsers} />
           )}
 
           {showUsersModal && (

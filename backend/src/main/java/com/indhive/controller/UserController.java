@@ -2,7 +2,6 @@ package com.indhive.controller;
 
 import com.indhive.dto.UserDTO;
 import com.indhive.dto.UserRequestDTO;
-import com.indhive.model.Project;
 import com.indhive.model.User;
 import com.indhive.security.JwtUtils;
 import com.indhive.service.UserService;

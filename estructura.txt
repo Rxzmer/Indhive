@@ -1,0 +1,150 @@
+.
+├── backend
+│   ├── Dockerfile
+│   ├── .gitignore
+│   ├── pom.xml
+│   └── src
+│       ├── main
+│       │   ├── java
+│       │   │   └── com
+│       │   │       └── indhive
+│       │   │           ├── config
+│       │   │           │   ├── DataInitializer.java
+│       │   │           │   ├── OpenAPIConfig.java
+│       │   │           │   └── WebConfig.java
+│       │   │           ├── controller
+│       │   │           │   ├── AdminController.java
+│       │   │           │   ├── AuthController.java
+│       │   │           │   ├── HomeController.java
+│       │   │           │   ├── ProjectController.java
+│       │   │           │   └── UserController.java
+│       │   │           ├── dto
+│       │   │           │   ├── EmailDTO.java
+│       │   │           │   ├── LoginRequest.java
+│       │   │           │   ├── ProjectDTO.java
+│       │   │           │   ├── ProjectRequestDTO.java
+│       │   │           │   ├── ResetPasswordDTO.java
+│       │   │           │   ├── UserDTO.java
+│       │   │           │   └── UserRequestDTO.java
+│       │   │           ├── exception
+│       │   │           │   └── GlobalExceptionHandler.java
+│       │   │           ├── IndhiveApplication.java
+│       │   │           ├── model
+│       │   │           │   ├── ProjectCollaboratorId.java
+│       │   │           │   ├── ProjectCollaborator.java
+│       │   │           │   ├── Project.java
+│       │   │           │   ├── RevokedToken.java
+│       │   │           │   └── User.java
+│       │   │           ├── repository
+│       │   │           │   ├── ProjectCollaboratorRepository.java
+│       │   │           │   ├── ProjectRepository.java
+│       │   │           │   ├── RevokedTokenRepository.java
+│       │   │           │   └── UserRepository.java
+│       │   │           ├── security
+│       │   │           │   ├── CustomAccessDeniedHandler.java
+│       │   │           │   ├── CustomAuthEntryPoint.java
+│       │   │           │   ├── CustomUserDetailsService.java
+│       │   │           │   ├── JwtAuthFilter.java
+│       │   │           │   ├── JwtUtils.java
+│       │   │           │   ├── LoginAttemptService.java
+│       │   │           │   └── SecurityConfig.java
+│       │   │           └── service
+│       │   │               ├── EmailService.java
+│       │   │               ├── ProjectService.java
+│       │   │               └── UserService.java
+│       │   └── resources
+│       │       ├── application.properties
+│       │       └── logback-spring.xml
+│       └── test
+│           ├── java
+│           │   └── com
+│           │       └── indhive
+│           │           ├── controller
+│           │           │   └── ProjectControllerTest.java
+│           │           ├── IndhiveApplicationTests.java
+│           │           ├── repository
+│           │           │   └── ProjectRepositoryIntegrationTest.java
+│           │           └── service
+│           │               └── ProjectServiceTest.java
+│           └── resources
+│               ├── application-test.properties
+│               └── application-test.yml
+├── docker-compose.dev.yml
+├── docker-compose.yml
+├── .env
+├── estructura.txt
+├── frontend
+│   ├── build
+│   │   ├── asset-manifest.json
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── manifest.json
+│   │   ├── precache-manifest.516c9e5e0d494cebb24a353a834fdc1d.js
+│   │   ├── robots.txt
+│   │   ├── service-worker.js
+│   │   └── static
+│   │       ├── css
+│   │       │   ├── main.86b07fe7.chunk.css
+│   │       │   └── main.86b07fe7.chunk.css.map
+│   │       ├── js
+│   │       │   ├── 2.9f6a0181.chunk.js
+│   │       │   ├── 2.9f6a0181.chunk.js.map
+│   │       │   ├── main.4e1cd116.chunk.js
+│   │       │   ├── main.4e1cd116.chunk.js.map
+│   │       │   ├── runtime~main.a8a9905a.js
+│   │       │   └── runtime~main.a8a9905a.js.map
+│   │       └── media
+│   │           └── background.cd4a096b.jpg
+│   ├── Dockerfile
+│   ├── .gitignore
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   ├── README.md
+│   └── src
+│       ├── App.css
+│       ├── App.jsx
+│       ├── assets
+│       │   ├── background.jpg
+│       │   ├── backmodal.webp
+│       │   └── LogoInd.png
+│       ├── components
+│       │   └── PrivateRoute.jsx
+│       ├── index.css
+│       ├── index.js
+│       ├── pages
+│       │   ├── CreateProjectModal.jsx
+│       │   ├── CreateUserModal.jsx
+│       │   ├── Dashboard.css
+│       │   ├── Dashboard.jsx
+│       │   ├── Landing.css
+│       │   ├── Landing.jsx
+│       │   ├── Login.css
+│       │   ├── Login.jsx
+│       │   ├── Modal.css
+│       │   ├── ProjectDetail.jsx
+│       │   ├── ProjectDetailModal.jsx
+│       │   ├── ProjectForm.jsx
+│       │   ├── ProjectListModal.jsx
+│       │   ├── RecoverPassword.jsx
+│       │   ├── Register.css
+│       │   ├── Register.jsx
+│       │   ├── ResetPassword.jsx
+│       │   ├── Toast.css
+│       │   ├── Toast.jsx
+│       │   ├── UserListModal.css
+│       │   └── UserListModal.jsx
+│       └── services
+│           └── authService.js
+├── .gitignore
+├── package.json
+├── pgdata  [error opening dir]
+└── .vscode
+    └── settings.json
+
+38 directories, 110 files
