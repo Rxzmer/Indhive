@@ -56,11 +56,11 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setUserInfo({ 
-        username: data.username, 
-        email: data.email, 
-        id: data.id, 
-        roles: data.roles 
+      setUserInfo({
+        username: data.username,
+        email: data.email,
+        id: data.id,
+        roles: data.roles
       });
       await fetchProjects();
     } catch (err) {
@@ -83,7 +83,7 @@ const Dashboard = () => {
 
   // Handlers
   const handleProjectUpdated = (updatedProject) => {
-    setProjects(prev => 
+    setProjects(prev =>
       prev.map(p => p.id === updatedProject.id ? updatedProject : p)
     );
     setSelectedProject(updatedProject);
@@ -102,7 +102,7 @@ const Dashboard = () => {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       setProjects(prev => prev.filter(p => p.id !== projectToDelete));
       showToast('Proyecto eliminado correctamente', 'success');
     } catch (err) {
@@ -119,8 +119,8 @@ const Dashboard = () => {
   };
 
   // Filtrado de proyectos
-  const filteredProjects = projects.filter(p => 
-    showOwnProjects 
+  const filteredProjects = projects.filter(p =>
+    showOwnProjects
       ? p.ownerUsername === userInfo.username
       : p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -214,9 +214,9 @@ const Dashboard = () => {
           {/* Grid de proyectos */}
           <div className="projects-grid">
             {filteredProjects.map(project => (
-              <div 
-                key={project.id} 
-                className="project-card" 
+              <div
+                key={project.id}
+                className="project-card"
                 onClick={() => setSelectedProject(project)}
               >
                 {(isAdmin || project.ownerUsername === userInfo.username) && (
@@ -243,7 +243,7 @@ const Dashboard = () => {
 
           {/* Botón para hacerse creador */}
           {!isAdmin && !isCreator && (
-            <button 
+            <button
               className="become-creator-button"
               onClick={async () => {
                 try {
@@ -254,7 +254,7 @@ const Dashboard = () => {
                       Authorization: `Bearer ${token}`,
                     },
                   });
-                  
+
                   if (res.ok) {
                     const data = await res.json();
                     localStorage.setItem('token', data.token);
@@ -276,8 +276,8 @@ const Dashboard = () => {
 
       {/* Modales */}
       {modals.createUser && (
-        <CreateUserModal 
-          onClose={() => toggleModal('createUser')} 
+        <CreateUserModal
+          onClose={() => toggleModal('createUser')}
           onUserCreated={() => {
             showToast('Usuario creado correctamente', 'success');
             toggleModal('createUser');
@@ -301,6 +301,11 @@ const Dashboard = () => {
               showToast('Error al eliminar usuario', 'error');
             }
           }}
+          search={searchTerm}
+          setSearch={setSearchTerm}
+          onUserUpdated={fetchUserInfo}
+          setToastMessage={(msg) => setToast(prev => ({ ...prev, message: msg }))}
+          setToastType={(type) => setToast(prev => ({ ...prev, type }))}
         />
       )}
 
@@ -338,14 +343,14 @@ const Dashboard = () => {
         <div className="confirm-delete-modal">
           <div className="modal-content">
             <h4>¿Estás seguro de que deseas eliminar este proyecto?</h4>
-            <button 
-              onClick={() => handleDeleteProject(true)} 
+            <button
+              onClick={() => handleDeleteProject(true)}
               className="register-button"
             >
               Aceptar
             </button>
-            <button 
-              onClick={() => handleDeleteProject(false)} 
+            <button
+              onClick={() => handleDeleteProject(false)}
               className="register-button cancel-button"
             >
               Cancelar
