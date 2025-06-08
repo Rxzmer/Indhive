@@ -1,6 +1,6 @@
 package com.indhive.dto;
 
-import java.util.Set;
+import java.util.List; 
 
 public class ProjectDTO {
 
@@ -9,14 +9,13 @@ public class ProjectDTO {
     private String description;
     private Long ownerId;
     private String ownerUsername;
-    private Set<SimpleUserDTO> collaborators;
+    private List<SimpleUserDTO> collaborators; 
 
     public ProjectDTO() {}
 
     public ProjectDTO(Long id, String title, String description,
                       Long ownerId, String ownerUsername,
-                      Set<SimpleUserDTO> collaborators) {
-        this.id = id;
+                      List<SimpleUserDTO> collaborators) { 
         this.title = title;
         this.description = description;
         this.ownerId = ownerId;
@@ -44,7 +43,7 @@ public class ProjectDTO {
         return ownerUsername;
     }
 
-    public Set<SimpleUserDTO> getCollaborators() {
+    public List<SimpleUserDTO> getCollaborators() { // CAMBIADO
         return collaborators;
     }
 
@@ -68,7 +67,7 @@ public class ProjectDTO {
         this.ownerUsername = ownerUsername;
     }
 
-    public void setCollaborators(Set<SimpleUserDTO> collaborators) {
+    public void setCollaborators(List<SimpleUserDTO> collaborators) { // CAMBIADO
         this.collaborators = collaborators;
     }
 }

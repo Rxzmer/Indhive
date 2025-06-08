@@ -14,7 +14,6 @@ import ProjectDetailModal from './ProjectDetailModal';
 import Toast from './Toast';
 
 const Dashboard = () => {
-  // Estados
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [userInfo, setUserInfo] = useState({ username: '', email: '', roles: '' });
@@ -31,7 +30,6 @@ const Dashboard = () => {
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [showOwnProjects, setShowOwnProjects] = useState(false);
 
-  // Constantes derivadas
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
   const isAdmin = userInfo.roles?.includes('ROLE_ADMIN');
@@ -83,13 +81,13 @@ const Dashboard = () => {
 
   // Handlers
   const handleProjectUpdated = (updatedProject) => {
-  setProjects(prev =>
-    prev.map(p => p.id === updatedProject.id ? updatedProject : p)
-  );
-  setSelectedProject(null); 
-  setTimeout(() => setSelectedProject(updatedProject), 0); // <- monta de nuevo
-  showToast('Proyecto actualizado correctamente', 'success');
-};
+    setProjects(prev =>
+      prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+    );
+    setSelectedProject(null);
+    setTimeout(() => setSelectedProject(updatedProject), 0);
+    showToast('Proyecto actualizado correctamente', 'success');
+  };
 
   const handleDeleteProject = async (confirmed) => {
     if (!confirmed || !projectToDelete) {
@@ -214,44 +212,64 @@ const Dashboard = () => {
 
           {/* Grid de proyectos */}
           <div className="projects-grid">
-            {filteredProjects.map(project => (
-              <div
-                key={project.id}
-                className="project-card"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`${apiUrl}/api/projects/${project.id}`, {
-                      headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (!res.ok) throw new Error('Error al obtener detalles del proyecto');
-                    const fullProject = await res.json();
-                    setSelectedProject(fullProject);
-                  } catch (error) {
-                    showToast('No se pudo cargar el proyecto completo', 'error');
-                    console.error(error);
-                  }
-                }}
-              >
-                {(isAdmin || project.ownerUsername === userInfo.username) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProjectToDelete(project.id);
-                      toggleModal('confirmDelete');
-                    }}
-                    className="delete-project-button"
-                    title="Eliminar proyecto"
-                  >
-                    ✕
-                  </button>
-                )}
-                <h4>{project.title}</h4>
-                <div className="project-description">
-                  {project.description.replace(/<[^>]*>/g, '').substring(0, 250)}
-                  {project.description.length > 250 && '...'}
+            {filteredProjects.map(project => {
+              // Mostrar nombres de colaboradores (igual que en el modal)
+              const collaboratorNames =
+                Array.isArray(project.collaborators) && project.collaborators.length > 0
+                  ? project.collaborators.map(u => u.username)
+                  : Array.isArray(project.collaboratorUsernames) && project.collaboratorUsernames.length > 0
+                    ? project.collaboratorUsernames
+                    : [];
+              return (
+                <div
+                  key={project.id}
+                  className="project-card"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${apiUrl}/api/projects/${project.id}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      if (!res.ok) throw new Error('Error al obtener detalles del proyecto');
+                      const fullProject = await res.json();
+                      setSelectedProject(fullProject);
+                    } catch (error) {
+                      showToast('No se pudo cargar el proyecto completo', 'error');
+                      console.error(error);
+                    }
+                  }}
+                >
+                  {(isAdmin || project.ownerUsername === userInfo.username) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProjectToDelete(project.id);
+                        toggleModal('confirmDelete');
+                      }}
+                      className="delete-project-button"
+                      title="Eliminar proyecto"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <h4>{project.title}</h4>
+                  <div className="project-description">
+                    {project.description.replace(/<[^>]*>/g, '').substring(0, 250)}
+                    {project.description.length > 250 && '...'}
+                  </div>
+                  <div style={{ marginTop: '0.5rem', minHeight: 22 }}>
+                    {collaboratorNames.length > 0 ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                        {collaboratorNames.map((name, i) => (
+                          <span className="user-tag" key={name + i}>{name}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ color: "#bbb", fontSize: "0.85em" }}>Sin colaboradores</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Botón para hacerse creador */}

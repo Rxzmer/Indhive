@@ -182,21 +182,22 @@ public class ProjectController {
     }
 
     private ProjectDTO toDTO(Project p) {
-        Set<SimpleUserDTO> collaborators = p.getCollaborators().stream()
-                .map(pc -> new SimpleUserDTO(
-                        pc.getUser().getId(),
-                        pc.getUser().getUsername()
-                ))
-                .collect(Collectors.toSet());
+    List<SimpleUserDTO> collaborators = p.getCollaborators().stream()
+            .map(pc -> new SimpleUserDTO(
+                    pc.getUser().getId(),
+                    pc.getUser().getUsername()
+            ))
+            .collect(Collectors.toList());
 
-        return new ProjectDTO(
-                p.getId(),
-                p.getTitle(),
-                p.getDescription(),
-                p.getOwner().getId(),
-                p.getOwner().getUsername(),
-                collaborators
-        );
-    }
+    return new ProjectDTO(
+            p.getId(),
+            p.getTitle(),
+            p.getDescription(),
+            p.getOwner().getId(),
+            p.getOwner().getUsername(),
+            collaborators
+    );
+}
+
 }
 
