@@ -1,6 +1,9 @@
-# 🎮 PixelBridge (Indhive)
+# 🎮 INDHive
 
-**PixelBridge** es una plataforma web pensada como un MVP funcional que conecta desarrolladores indie con artistas emergentes de distintas disciplinas interesadas en el desarrollo de videojuegos: ilustradores, músicos, actores de voz y más.
+![image](https://github.com/user-attachments/assets/af1f288a-a88e-4867-b330-f3a3b6ea1765)
+
+
+**INDHive** es una plataforma web pensada como un MVP funcional que conecta desarrolladores indie con artistas emergentes de distintas disciplinas interesadas en el desarrollo de videojuegos: ilustradores, músicos, actores de voz y más.
 
 ## 🚀 Objetivo
 
