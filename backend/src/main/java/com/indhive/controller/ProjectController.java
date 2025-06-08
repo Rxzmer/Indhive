@@ -2,6 +2,7 @@ package com.indhive.controller;
 
 import com.indhive.dto.ProjectDTO;
 import com.indhive.dto.ProjectRequestDTO;
+import com.indhive.dto.SimpleUserDTO;
 import com.indhive.model.Project;
 import com.indhive.model.ProjectCollaborator;
 import com.indhive.model.User;
@@ -10,7 +11,6 @@ import com.indhive.service.UserService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -182,8 +182,11 @@ public class ProjectController {
     }
 
     private ProjectDTO toDTO(Project p) {
-        Set<String> collaboratorNames = p.getCollaborators().stream()
-                .map(pc -> pc.getUser().getUsername())
+        Set<SimpleUserDTO> collaborators = p.getCollaborators().stream()
+                .map(pc -> new SimpleUserDTO(
+                        pc.getUser().getId(),
+                        pc.getUser().getUsername()
+                ))
                 .collect(Collectors.toSet());
 
         return new ProjectDTO(
@@ -192,6 +195,8 @@ public class ProjectController {
                 p.getDescription(),
                 p.getOwner().getId(),
                 p.getOwner().getUsername(),
-                collaboratorNames);
+                collaborators
+        );
     }
 }
+

@@ -83,12 +83,13 @@ const Dashboard = () => {
 
   // Handlers
   const handleProjectUpdated = (updatedProject) => {
-    setProjects(prev =>
-      prev.map(p => p.id === updatedProject.id ? updatedProject : p)
-    );
-    setSelectedProject(updatedProject);
-    showToast('Proyecto actualizado correctamente', 'success');
-  };
+  setProjects(prev =>
+    prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+  );
+  setSelectedProject(null); 
+  setTimeout(() => setSelectedProject(updatedProject), 0); // <- monta de nuevo
+  showToast('Proyecto actualizado correctamente', 'success');
+};
 
   const handleDeleteProject = async (confirmed) => {
     if (!confirmed || !projectToDelete) {
@@ -217,7 +218,19 @@ const Dashboard = () => {
               <div
                 key={project.id}
                 className="project-card"
-                onClick={() => setSelectedProject(project)}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${apiUrl}/api/projects/${project.id}`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (!res.ok) throw new Error('Error al obtener detalles del proyecto');
+                    const fullProject = await res.json();
+                    setSelectedProject(fullProject);
+                  } catch (error) {
+                    showToast('No se pudo cargar el proyecto completo', 'error');
+                    console.error(error);
+                  }
+                }}
               >
                 {(isAdmin || project.ownerUsername === userInfo.username) && (
                   <button

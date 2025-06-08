@@ -10,10 +10,7 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
     description: project.description
   });
   const [collaborators, setCollaborators] = useState(project.collaborators || []);
-  const [userSearch, setUserSearch] = useState({
-    query: '',
-    results: []
-  });
+  const [userSearch, setUserSearch] = useState({ query: '', results: [] });
   const [loading, setLoading] = useState(false);
   const [permissions, setPermissions] = useState({
     canEdit: false,
@@ -24,7 +21,14 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  // Verificar permisos al cargar
+  useEffect(() => {
+    if (Array.isArray(project.collaborators)) {
+      setCollaborators(project.collaborators);
+    } else {
+      setCollaborators([]);
+    }
+  }, [project]);
+
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -32,10 +36,10 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const user = await res.json();
-        
+
         const isAdmin = user.roles?.includes('ROLE_ADMIN');
         const isOwner = user.id === project.ownerId;
-        
+
         setPermissions({
           canEdit: isAdmin || (user.roles?.includes('ROLE_CREATOR') && isOwner),
           isAdmin,
@@ -45,54 +49,48 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
         console.error("Error checking permissions:", err);
       }
     };
-    
+
     checkPermissions();
   }, [apiUrl, token, project.ownerId]);
 
-  // Buscar usuarios
-  // Buscar usuarios
-const searchUsers = async (query) => {
-  if (query.length < 2) {
-    setUserSearch(prev => ({ ...prev, results: [] }));
-    return;
-  }
-
-  try {
-    const encodedQuery = encodeURIComponent(query);  // Asegurarnos de que el query esté bien formateado
-    const res = await fetch(`${apiUrl}/api/users?search=${encodedQuery}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    
-    if (!res.ok) throw new Error('Error al realizar la búsqueda de usuarios');
-
-    const data = await res.json();
-
-    // Verificar que la respuesta sea un array antes de usar filter
-    if (Array.isArray(data)) {
-      setUserSearch(prev => ({
-        ...prev,
-        results: data.filter(u => 
-          !collaborators.some(c => c.id === u.id) && 
-          u.id !== project.ownerId
-        )
-      }));
-    } else {
-      console.error("La respuesta del servidor no es un array");
-      setUserSearch(prev => ({ ...prev, results: [] }));  // Manejar la situación si no es un array
+  const searchUsers = async (query) => {
+    if (query.length < 2) {
+      setUserSearch(prev => ({ ...prev, results: [] }));
+      return;
     }
-  } catch (err) {
-    console.error("Error searching users:", err);
-    setUserSearch(prev => ({ ...prev, results: [] }));  // Limpiar resultados en caso de error
-  }
-};
 
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      const res = await fetch(`${apiUrl}/api/users?search=${encodedQuery}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-  // Manejar cambios en el formulario
+      if (!res.ok) throw new Error('Error al realizar la búsqueda de usuarios');
+
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setUserSearch(prev => ({
+          ...prev,
+          results: data.filter(u =>
+            !collaborators.some(c => c.id === u.id) &&
+            u.id !== project.ownerId
+          )
+        }));
+      } else {
+        console.error("La respuesta del servidor no es un array");
+        setUserSearch(prev => ({ ...prev, results: [] }));
+      }
+    } catch (err) {
+      console.error("Error searching users:", err);
+      setUserSearch(prev => ({ ...prev, results: [] }));
+    }
+  };
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Guardar cambios
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -105,14 +103,18 @@ const searchUsers = async (query) => {
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          collaboratorIds: collaborators.map(c => c.id) // Mandamos solo los ids de los colaboradores
+          collaboratorIds: collaborators.map(c => c.id)
         })
       });
 
       if (!res.ok) throw new Error('Error al guardar el proyecto');
 
-      const updatedProject = await res.json();
-      onUpdated(updatedProject); // Llamada a onUpdated con el proyecto actualizado
+      const res2 = await fetch(`${apiUrl}/api/projects/${project.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const fullProject = await res2.json();
+      onUpdated(fullProject);
       setEditMode(false);
     } catch (err) {
       console.error("Error saving project:", err);
@@ -121,22 +123,20 @@ const searchUsers = async (query) => {
     }
   };
 
-  // Manejar agregar colaborador
   const handleAddCollaborator = (user) => {
-    if (!collaborators.some(c => c.id === user.id)) { // Asegura que no se agregue un duplicado
+    if (!collaborators.some(c => c.id === user.id)) {
       setCollaborators(prev => [...prev, user]);
     }
     setUserSearch(prev => ({ ...prev, query: '', results: [] }));
   };
 
-  // Manejar eliminar colaborador
   const handleRemoveCollaborator = async (userId) => {
     try {
       await fetch(`${apiUrl}/api/projects/${project.id}/collaborators/${userId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       setCollaborators(prev => prev.filter(c => c.id !== userId));
     } catch (err) {
       console.error("Error removing collaborator:", err);
@@ -146,14 +146,12 @@ const searchUsers = async (query) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        {/* Banner del proyecto (si existe) */}
         {project.bannerUrl && (
           <div className="banner-container">
             <img src={project.bannerUrl} alt="Banner del proyecto" className="project-banner" />
           </div>
         )}
 
-        {/* Botón de edición (si tiene permisos) */}
         {permissions.canEdit && (
           <button
             className="register-close"
@@ -166,7 +164,6 @@ const searchUsers = async (query) => {
 
         {editMode ? (
           <>
-            {/* Modo edición */}
             <input
               className="register-input"
               value={formData.title}
@@ -193,10 +190,9 @@ const searchUsers = async (query) => {
               }}
             />
 
-            {/* Gestión de colaboradores */}
             <div className="collaborators-section">
               <h4>Colaboradores:</h4>
-              
+
               <div className="user-search">
                 <input
                   type="text"
@@ -207,7 +203,7 @@ const searchUsers = async (query) => {
                     searchUsers(e.target.value);
                   }}
                 />
-                
+
                 {userSearch.results.length > 0 && (
                   <ul className="user-suggestions">
                     {userSearch.results.map(user => (
@@ -223,7 +219,7 @@ const searchUsers = async (query) => {
                 {collaborators.map(user => (
                   <span key={user.id} className="user-tag">
                     {user.username}
-                    <button 
+                    <button
                       onClick={() => handleRemoveCollaborator(user.id)}
                       className="remove-collaborator"
                     >
@@ -234,16 +230,15 @@ const searchUsers = async (query) => {
               </div>
             </div>
 
-            {/* Botones de acción */}
             <div className="modal-actions">
-              <button 
-                onClick={handleSave} 
+              <button
+                onClick={handleSave}
                 disabled={loading}
                 className="register-button"
               >
                 {loading ? 'Guardando...' : 'Guardar Cambios'}
               </button>
-              <button 
+              <button
                 onClick={() => setEditMode(false)}
                 className="register-button cancel-button"
               >
@@ -253,24 +248,21 @@ const searchUsers = async (query) => {
           </>
         ) : (
           <>
-            {/* Modo visualización */}
             <h3 className="modal-title">{project.title}</h3>
-            
-            <div 
-              className="project-description" 
-              dangerouslySetInnerHTML={{ __html: project.description }} 
+
+            <div
+              className="project-description"
+              dangerouslySetInnerHTML={{ __html: project.description }}
             />
-            
+
             {collaborators.length > 0 && (
-              <div className="collaborators-list">
-                <h4>Colaboradores:</h4>
-                <div className="collaborators-tags">
-                  {collaborators.map(user => (
-                    <span key={user.id} className="user-tag">
-                      {user.username}
-                    </span>
-                  ))}
-                </div>
+              <div className="user-tags-container">
+                <h4 style={{ marginBottom: '0.5rem' }}>Colaboradores:</h4>
+                {collaborators.map(user => (
+                  <span key={user.id} className="user-tag">
+                    {user.username}
+                  </span>
+                ))}
               </div>
             )}
           </>
