@@ -53,7 +53,7 @@ public class ProjectController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CREATOR')")
-    public ResponseEntity<?> crear(@RequestBody ProjectRequestDTO dto, Authentication auth) {
+    public ResponseEntity<?> crear(@Valid @RequestBody ProjectRequestDTO dto, Authentication auth) {
         String email = auth.getName();
         Optional<User> ownerOpt = userService.obtenerUsuarioPorEmail(email);
         if (ownerOpt.isEmpty()) {
@@ -82,34 +82,27 @@ public class ProjectController {
             @Valid @RequestBody ProjectRequestDTO dto,
             Authentication auth) {
 
-        // Obtener proyecto
         Project proyecto = projectService.obtenerProyectoPorId(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        // Verificar permisos: si es ADMIN o propietario
         String email = auth.getName();
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         boolean isOwner = proyecto.getOwner().getEmail().equalsIgnoreCase(email);
 
-        // Solo los ADMIN o el propietario pueden editar
         if (!isAdmin && !isOwner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para editar este proyecto");
         }
 
-        // Actualizar proyecto
         proyecto.setTitle(dto.getTitle());
         proyecto.setDescription(dto.getDescription());
 
-        // Manejo de colaboradores
         if (dto.getCollaboratorIds() != null) {
             Set<Long> nuevosIds = new HashSet<>(dto.getCollaboratorIds());
 
-            // Eliminar colaboradores que ya no están
             proyecto.getCollaborators().removeIf(pc -> !nuevosIds.contains(pc.getUser().getId()) &&
                     !pc.getUser().getId().equals(proyecto.getOwner().getId()));
 
-            // Añadir nuevos colaboradores
             Set<Long> idsActuales = proyecto.getCollaborators().stream()
                     .map(pc -> pc.getUser().getId())
                     .collect(Collectors.toSet());
@@ -122,11 +115,9 @@ public class ProjectController {
                                     ProjectCollaborator pc = new ProjectCollaborator(proyecto, user);
                                     proyecto.getCollaborators().add(pc);
                                 }
-
                             }));
         }
 
-        // Guardar y retornar
         Project actualizado = projectService.guardarProyecto(proyecto);
         return ResponseEntity.ok(toDTO(actualizado));
     }
@@ -150,13 +141,6 @@ public class ProjectController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Elimina un colaborador de un proyecto.
-     * 
-     * @param projectId ID del proyecto
-     * @param userId    ID del colaborador
-     * @return Respuesta HTTP con el resultado de la operación
-     */
     @DeleteMapping("/{projectId}/collaborators/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectSecurity.isOwnerOrCollaborator(#projectId, authentication.name)")
     public ResponseEntity<?> eliminarColaborador(
@@ -170,7 +154,6 @@ public class ProjectController {
         }
 
         try {
-            // Llamar al servicio para eliminar el colaborador
             projectService.eliminarColaborador(projectId, userId);
             return ResponseEntity.ok(Map.of(
                     "message", "Colaborador eliminado correctamente",
@@ -182,22 +165,20 @@ public class ProjectController {
     }
 
     private ProjectDTO toDTO(Project p) {
-    List<SimpleUserDTO> collaborators = p.getCollaborators().stream()
-            .map(pc -> new SimpleUserDTO(
-                    pc.getUser().getId(),
-                    pc.getUser().getUsername()
-            ))
-            .collect(Collectors.toList());
+        List<SimpleUserDTO> collaborators = p.getCollaborators().stream()
+                .map(pc -> new SimpleUserDTO(
+                        pc.getUser().getId(),
+                        pc.getUser().getUsername()
+                ))
+                .collect(Collectors.toList());
 
-    return new ProjectDTO(
-            p.getId(),
-            p.getTitle(),
-            p.getDescription(),
-            p.getOwner().getId(),
-            p.getOwner().getUsername(),
-            collaborators
-    );
+        return new ProjectDTO(
+                p.getId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getOwner().getId(),
+                p.getOwner().getUsername(),
+                collaborators
+        );
+    }
 }
-
-}
-

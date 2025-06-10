@@ -92,8 +92,20 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
       });
 
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Error al crear proyecto');
+        let message = 'Error desconocido';
+        try {
+          const data = await res.json();
+          message = data.message || JSON.stringify(data);
+        } catch {
+          message = await res.text(); // fallback por si no es JSON
+        }
+
+        // Diferenciar errores
+        if (res.status === 403 || res.status === 401) {
+          throw new Error('No tienes permisos o tu sesión ha expirado');
+        }
+
+        throw new Error(message);
       }
 
       onProjectCreated();
@@ -143,9 +155,9 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
             <div className="selected-users">
               {selectedUsers.map(u => (
                 <span key={u.id} className="user-tag">
-                  {u.username} 
-                  <button 
-                    onClick={() => removeUser(u.id)} 
+                  {u.username}
+                  <button
+                    onClick={() => removeUser(u.id)}
                     disabled={loading} // Deshabilitar si la creación está en proceso
                   >
                     x

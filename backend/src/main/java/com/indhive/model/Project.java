@@ -24,7 +24,8 @@ public class Project {
     @NotBlank
     private String title;
 
-    @Column(length = 2000)
+    @Lob
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String description;
 
     // Relación Many-to-One con User, representa al dueño del proyecto
@@ -37,7 +38,8 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProjectCollaborator> collaborators = new HashSet<>();
 
-    public Project() {}
+    public Project() {
+    }
 
     public Project(String title, String description, User owner) {
         this.title = title;
@@ -46,23 +48,43 @@ public class Project {
     }
 
     // Getters y Setters
-    public Long getId() { return id; }
+    public Long getId() {
+        return id;
+    }
 
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getTitle() { return title; }
+    public String getTitle() {
+        return title;
+    }
 
-    public void setTitle(String title) { this.title = title; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public String getDescription() { return description; }
+    public String getDescription() {
+        return description;
+    }
 
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public User getOwner() { return owner; }
+    public User getOwner() {
+        return owner;
+    }
 
-    public void setOwner(User owner) { this.owner = owner; }
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
 
-    public Set<ProjectCollaborator> getCollaborators() { return collaborators; }
+    public Set<ProjectCollaborator> getCollaborators() {
+        return collaborators;
+    }
 
-    public void setCollaborators(Set<ProjectCollaborator> collaborators) { this.collaborators = collaborators; }
+    public void setCollaborators(Set<ProjectCollaborator> collaborators) {
+        this.collaborators = collaborators;
+    }
 }

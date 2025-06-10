@@ -7,7 +7,6 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
   const token = localStorage.getItem('token');
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  // Estado
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     title: project.title,
@@ -22,21 +21,18 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
     isOwner: false,
   });
 
-  // Este hook garantiza que SIEMPRE tengas colaboradores en estado, usando lo que venga
   useEffect(() => {
-    if (Array.isArray(project.collaborators) && project.collaborators.length > 0) {
+    if (Array.isArray(project.collaborators)) {
       setCollaborators(project.collaborators);
-    } else if (Array.isArray(project.collaboratorUsernames) && project.collaboratorUsernames.length > 0) {
-      // Si no tienes los objetos, los creas con un id ficticio negativo (solo para vista)
-      setCollaborators(
-        project.collaboratorUsernames.map((username, i) => ({
-          id: -100 - i, // valor negativo para que nunca choque con un id real
-          username,
-        }))
-      );
+    } else if (Array.isArray(project.collaboratorUsernames)) {
+      setCollaborators(project.collaboratorUsernames.map((username, i) => ({
+        id: -100 - i,
+        username,
+      })));
     } else {
       setCollaborators([]);
     }
+
     setFormData({
       title: project.title,
       description: project.description,
@@ -66,238 +62,176 @@ const ProjectDetailModal = ({ project, onClose, onUpdated }) => {
     checkPermissions();
   }, [apiUrl, token, project.ownerId]);
 
-  // --------
-  // Métodos auxiliares
-  // --------
-
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const searchUsers = async (query) => {
-    if (query.length < 2) {
-      setUserSearch(prev => ({ ...prev, results: [] }));
-      return;
-    }
+    if (query.length < 2) return setUserSearch({ query, results: [] });
 
     try {
-      const encodedQuery = encodeURIComponent(query);
-      const res = await fetch(`${apiUrl}/api/users?search=${encodedQuery}`, {
+      const res = await fetch(`${apiUrl}/api/users?search=${encodeURIComponent(query)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error('Error al realizar la búsqueda de usuarios');
+      if (!res.ok) throw new Error();
       const data = await res.json();
 
-      if (Array.isArray(data)) {
-        setUserSearch(prev => ({
-          ...prev,
-          results: data.filter(u =>
-            !collaborators.some(c => c.username === u.username) &&
-            u.id !== project.ownerId
-          ),
-        }));
-      } else {
-        setUserSearch(prev => ({ ...prev, results: [] }));
-      }
-    } catch (err) {
-      setUserSearch(prev => ({ ...prev, results: [] }));
+      setUserSearch({
+        query,
+        results: data.filter(u =>
+          !collaborators.some(c => c.username === u.username) &&
+          u.id !== project.ownerId
+        ),
+      });
+    } catch {
+      setUserSearch({ query, results: [] });
     }
   };
 
   const handleAddCollaborator = (user) => {
-    if (!collaborators.some(c => c.id === user.id || c.username === user.username)) {
-      setCollaborators(prev => [...prev, user]);
-    }
-    setUserSearch(prev => ({ ...prev, query: '', results: [] }));
+    setCollaborators([...collaborators, user]);
+    setUserSearch({ query: '', results: [] });
   };
 
-  const handleRemoveCollaborator = (userId) => {
-    setCollaborators(prev => prev.filter(c => c.id !== userId));
+  const handleRemoveCollaborator = (id) => {
+    setCollaborators(collaborators.filter(u => u.id !== id));
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    try {
-      // Filtra solo los colaboradores que tienen id > 0
-      const validCollaborators = collaborators.filter(c => c.id > 0);
-      const collaboratorIds = validCollaborators.map(c => c.id);
-
-      const res = await fetch(`${apiUrl}/api/projects/${project.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          collaboratorIds,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Error al guardar el proyecto');
-
-      const res2 = await fetch(`${apiUrl}/api/projects/${project.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const fullProject = await res2.json();
-      onUpdated(fullProject);
-      setEditMode(false);
-    } catch (err) {
-      console.error('Error saving project:', err);
-    } finally {
+  setLoading(true);
+  try {
+    if (!formData.title.trim()) {
+      alert('El título es obligatorio');
       setLoading(false);
+      return;
     }
-  };
 
-  // --------
-  // Renderizado
-  // --------
+    const validCollaborators = collaborators.filter(c => c.id > 0);
+    const collaboratorIds = validCollaborators.map(c => c.id);
+
+    const res = await fetch(`${apiUrl}/api/projects/${project.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: formData.title,
+        description: formData.description,
+        collaboratorIds,
+      }),
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Error desconocido al guardar el proyecto');
+    }
+
+    const updatedProject = await (await fetch(`${apiUrl}/api/projects/${project.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })).json();
+
+    onUpdated(updatedProject);
+    setEditMode(false);
+    onClose(); 
+  } catch (err) {
+    console.error('Error al guardar proyecto:', err.message || err);
+    alert('Error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
-        {project.bannerUrl && (
-          <div className="banner-container">
-            <img
-              src={project.bannerUrl}
-              alt="Banner del proyecto"
-              className="project-banner"
-            />
-          </div>
-        )}
-
-        {permissions.canEdit && (
-          <button
-            className="register-close"
-            onClick={() => setEditMode(!editMode)}
-            title={editMode ? 'Cancelar edición' : 'Editar proyecto'}
-          >
-            {editMode ? '✕' : '✎'}
-          </button>
-        )}
-
         {editMode ? (
-          <>
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="modal-form">
+            <h3 className="modal-title">{project.title}</h3>
+            {project.owner && (
+              <div className="project-owner-info">
+                <div className="owner-name">{project.owner.username}</div>
+                <div className="owner-email">{project.owner.email}</div>
+              </div>
+            )}
+
+
+
             <input
-              className="register-input"
+              type="text"
               value={formData.title}
               onChange={e => handleChange('title', e.target.value)}
-              placeholder="Título del proyecto"
+              placeholder="Título"
+              required
             />
-
-            <label className="description-label">Descripción:</label>
+            <label style={{ marginBottom: '0.5rem', display: 'block' }}>Descripción detallada:</label>
             <ReactQuill
               theme="snow"
               value={formData.description}
-              onChange={value => handleChange('description', value)}
-              modules={{
-                toolbar: [
-                  ['bold', 'italic', 'underline'],
-                  [{ list: 'bullet' }],
-                  ['clean'],
-                ],
-              }}
-              style={{
-                backgroundColor: '#1a1a1a',
-                color: 'white',
-                marginBottom: '1rem',
-              }}
+              onChange={(value) => handleChange('description', value)}
             />
 
-            <div className="collaborators-section">
-              <h4>Colaboradores:</h4>
-              <div className="user-search">
-                <input
-                  type="text"
-                  placeholder="Buscar usuarios..."
-                  value={userSearch.query}
-                  onChange={e => {
-                    setUserSearch(prev => ({
-                      ...prev,
-                      query: e.target.value,
-                    }));
-                    searchUsers(e.target.value);
-                  }}
-                />
-
-                {userSearch.results.length > 0 && (
-                  <ul className="user-suggestions">
-                    {userSearch.results.map(user => (
-                      <li key={user.id} onClick={() => handleAddCollaborator(user)}>
-                        {user.username}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="current-collaborators user-tags-container">
-                {collaborators.length > 0 ? (
-                  collaborators.map(user => (
-                    <span key={user.id + user.username} className="user-tag">
-                      {user.username}
-                      {/* Solo muestra X para usuarios válidos */}
-                      {user.id > 0 && (
-                        <button
-                          type="button"
-                          className="remove-collaborator"
-                          onClick={() => handleRemoveCollaborator(user.id)}
-                          title="Eliminar colaborador"
-                          style={{
-                            marginLeft: '0.5em',
-                            background: 'none',
-                            border: 'none',
-                            color: '#e5534b',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            fontSize: '1em',
-                          }}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: '#888' }}>Sin colaboradores</span>
-                )}
+            <div className="user-autocomplete">
+              <input
+                type="text"
+                placeholder="Buscar usuarios colaboradores"
+                value={userSearch.query}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setUserSearch(prev => ({ ...prev, query: val }));
+                  searchUsers(val);
+                }}
+              />
+              {userSearch.results.length > 0 && (
+                <ul className="suggestions-list">
+                  {userSearch.results.map(u => (
+                    <li key={u.id} onClick={() => handleAddCollaborator(u)}>
+                      {u.username}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="selected-users">
+                {collaborators.map(u => (
+                  <span key={u.id + u.username} className="user-tag">
+                    {u.username}
+                    {u.id > 0 && (
+                      <button onClick={() => handleRemoveCollaborator(u.id)} disabled={loading}>
+                        x
+                      </button>
+                    )}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="modal-actions">
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="register-button"
-              >
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+            <div className="modal-buttons">
+              <button type="submit" className="register-button" disabled={loading}>
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
-              <button
-                onClick={() => setEditMode(false)}
-                className="register-button cancel-button"
-              >
+              <button type="button" className="register-button" onClick={() => setEditMode(false)}>
                 Cancelar
               </button>
             </div>
-          </>
+          </form>
         ) : (
           <>
             <h3 className="modal-title">{project.title}</h3>
-            <div
-              className="project-description"
-              dangerouslySetInnerHTML={{ __html: project.description }}
-            />
-
-            {/* Vista de solo lectura */}
+            <div className="project-description" dangerouslySetInnerHTML={{ __html: project.description }} />
             {collaborators.length > 0 && (
               <div className="user-tags-container">
                 <h4 style={{ marginBottom: '0.5rem' }}>Colaboradores:</h4>
-                {collaborators.map((user, i) => (
-                  <span key={user.id + user.username} className="user-tag">
-                    {user.username}
-                  </span>
+                {collaborators.map(u => (
+                  <span key={u.id + u.username} className="user-tag">{u.username}</span>
                 ))}
+              </div>
+            )}
+            {permissions.canEdit && (
+              <div className="modal-buttons">
+                <button className="register-button" onClick={() => setEditMode(true)}>
+                  Editar
+                </button>
               </div>
             )}
           </>

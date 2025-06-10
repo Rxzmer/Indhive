@@ -10,9 +10,10 @@ public class ProjectRequestDTO {
     @NotBlank(message = "El título no puede estar vacío")
     private String title;
 
-    @Size(max = 2000, message = "La descripción no puede superar los 2000 caracteres")
+    
     private String description;
 
+    // IDs de los usuarios colaboradores seleccionados
     private Set<Long> collaboratorIds;
 
     public String getTitle() {

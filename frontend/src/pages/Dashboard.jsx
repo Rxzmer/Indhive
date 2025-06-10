@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import './Register.css';
+
 import './Dashboard.css';
 import './Modal.css';
 import background from '../assets/background.jpg';
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'info' });
+  const [chatOpen, setChatOpen] = useState(false);
   const [modals, setModals] = useState({
     createUser: false,
     createProject: false,
@@ -140,6 +142,27 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* Chat flotante simulado */}
+      <div className="chat-container">
+        {chatOpen && (
+          <div className="chat-window">
+            <div className="chat-header">
+              Chat de INDHive
+              <button onClick={() => setChatOpen(false)} className="chat-close-button">×</button>
+            </div>
+            <div className="chat-body">
+              <p style={{ color: '#666' }}> En desarrollo </p>
+            </div>
+          </div>
+        )}
+        {!chatOpen && (
+          <button className="chat-toggle-button" onClick={() => setChatOpen(true)}>
+            🗨
+          </button>
+        )}
+      </div>
+
+
       {/* Contenido principal */}
       <div className="dashboard-layout">
         {/* Sidebar */}
@@ -157,7 +180,7 @@ const Dashboard = () => {
               onClick={() => setShowOwnProjects(!showOwnProjects)}
               className="register-button dashboard-button"
             >
-              {showOwnProjects ? '[TODOS LOS PROYECTOS]' : '[MIS PROYECTOS]'}
+              {showOwnProjects ? 'TODOS LOS PROYECTOS' : 'MIS PROYECTOS'}
             </button>
 
             <button
@@ -167,22 +190,23 @@ const Dashboard = () => {
               CREAR PROYECTO
             </button>
 
-            <button
-              onClick={() => toggleModal('projectList')}
-              className="register-button dashboard-button"
-            >
-              LISTAR PROYECTOS
-            </button>
-
             {isAdmin && (
               <>
                 <button
-                  onClick={() => toggleModal('createUser')}
+                  onClick={() => toggleModal('projectList')}
                   className="register-button dashboard-button"
                 >
-                  CREAR USUARIO
+                  LISTAR PROYECTOS
                 </button>
 
+                <>
+                  <button
+                    onClick={() => toggleModal('createUser')}
+                    className="register-button dashboard-button"
+                  >
+                    CREAR USUARIO
+                  </button>
+                </>
                 <button
                   onClick={() => {
                     toggleModal('userList');
@@ -208,7 +232,7 @@ const Dashboard = () => {
             <img src={logo} alt="Indhive" className="dashboard-logo" />
           </div>
 
-          <h2 className="section-title">TABLERO DE USUARIO</h2>
+          <h2 className="section-title">TABLERO DE PROYECTOS</h2>
 
           {/* Grid de proyectos */}
           <div className="projects-grid">

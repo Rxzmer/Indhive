@@ -171,6 +171,19 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.project-owner-info {
+  margin-bottom: 1rem;
+}
+
+.project-owner-info .owner-name {
+  font-weight: 500;
+}
+
+.project-owner-info .owner-email {
+  font-size: 0.95em;
+  color: #888;
+}
+
 /* Botón para eliminar tag */
 .user-tag-remove {
   display: inline-flex;
