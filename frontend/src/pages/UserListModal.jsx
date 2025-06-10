@@ -1,9 +1,27 @@
 import React, { useState } from 'react';
 import './UserListModal.css';
+import Toast from './Toast'; 
 
-const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
+const UserListModal = ({
+  users,
+  onClose,
+  onDelete,
+  search,
+  setSearch,
+  onUserUpdated,
+  setToastMessage,
+  setToastType
+}) => {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ username: '', email: '', roles: '' });
+
+  // Estado para manejar la confirmación de eliminación
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+
+  // Estados para los mensajes de Toast
+  const [toastMessage, setToastMessageState] = useState('');
+  const [toastType, setToastTypeState] = useState('');
 
   const filtered = users.filter(u =>
     u.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -34,14 +52,44 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
       });
 
       if (!res.ok) {
-        alert('Error al guardar los cambios');
+        const msg = await res.text();
+        setToastType('error');
+        setToastMessageState(msg || 'Error al guardar los cambios');
         return;
       }
 
-      window.location.reload();
+      setEditId(null);
+      setToastType('success');
+      setToastMessageState('Usuario actualizado correctamente');
+      onUserUpdated();
     } catch (err) {
-      alert('Error inesperado: ' + err.message);
+      setToastType('error');
+      setToastMessageState('Error inesperado: ' + err.message);
     }
+  };
+
+  // Función para manejar la eliminación con modal de confirmación
+  const handleDeleteUserClick = (userId) => {
+    // Guardamos el id del usuario a eliminar y mostramos el modal
+    setSelectedUserId(userId);
+    setShowConfirmModal(true);
+  };
+
+  // Confirmar la eliminación
+  const confirmDeleteUser = () => {
+    onDelete(selectedUserId);  // Elimina el usuario
+
+    // Mostrar Toast de éxito
+    setToastMessageState('Usuario eliminado correctamente');
+    setToastType('success');
+    setShowConfirmModal(false); // Cerrar el modal de confirmación
+  };
+
+  // Cancelar la eliminación
+  const cancelDeleteUser = () => {
+    setToastMessageState('Operación de eliminación cancelada');
+    setToastType('info');
+    setShowConfirmModal(false); // Cerrar el modal de confirmación
   };
 
   return (
@@ -91,11 +139,14 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
                       <select className="table-select" name="roles" value={editForm.roles} onChange={handleEditChange}>
                         <option value="ROLE_USER">Usuario</option>
                         <option value="ROLE_ADMIN">Administrador</option>
+                        <option value="ROLE_USER,ROLE_CREATOR">Creador</option>
                       </select>
                     ) : (
-                      <span className={`role-tag ${u.roles.toLowerCase()}`}>
-                        {u.roles.replace('ROLE_', '')}
-                      </span>
+                      <div className="role-tags">
+                        {u.roles.split(',').map(r => (
+                          <span key={r} className="role-tag">{r.replace('ROLE_', '')}</span>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td>
@@ -118,11 +169,7 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
                     ) : (
                       <div className="edit-actions">
                         <button onClick={() => handleEditClick(u)} className="register-button">Editar</button>
-                        <button onClick={() => {
-                          if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-                            onDelete(u.id);
-                          }
-                        }} className="register-button delete-button red-button">Eliminar</button>
+                        <button onClick={() => handleDeleteUserClick(u.id)} className="register-button delete-button red-button">Eliminar</button>
                       </div>
                     )}
                   </td>
@@ -132,8 +179,25 @@ const UserListModal = ({ users, onClose, onDelete, search, setSearch }) => {
           </table>
         </div>
 
-
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {showConfirmModal && (
+        <div className="confirm-delete-modal">
+          <div className="modal-content">
+            <h4>¿Estás seguro de que deseas eliminar este usuario?</h4>
+            <button onClick={confirmDeleteUser} className="register-button">Aceptar</button>
+            <button onClick={cancelDeleteUser} className="register-button cancel-button">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast para la confirmación y mensajes */}
+      <Toast 
+        message={toastMessage} 
+        type={toastType} 
+        onClose={() => { setToastMessageState(''); setToastType(''); }} 
+      />
     </div>
   );
 };

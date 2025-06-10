@@ -1,36 +1,72 @@
 package com.indhive.service;
 
-import com.indhive.model.Project;
-import com.indhive.repository.ProjectRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.indhive.model.Project;
+import com.indhive.repository.ProjectCollaboratorRepository;
+import com.indhive.repository.ProjectRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
 @Service
+@Transactional  // Mueve esta anotación aquí
 public class ProjectService {
 
     @Autowired
     private ProjectRepository proyectoRepository;
 
-    // rxzmer: obtiene la lista completa de proyectos
+    @Autowired
+    private ProjectCollaboratorRepository collaboratorRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    // Obtener todos los proyectos
     public List<Project> listarProyectos() {
         return proyectoRepository.findAll();
     }
 
-    // rxzmer: busca un proyecto por su ID
+    // Buscar por ID
     public Optional<Project> obtenerProyectoPorId(Long id) {
         return proyectoRepository.findById(id);
     }
 
-    // rxzmer: guarda o actualiza un proyecto en la base de datos
+    // Guardar o actualizar
     public Project guardarProyecto(Project proyecto) {
         return proyectoRepository.save(proyecto);
     }
 
-    // rxzmer: elimina un proyecto por su ID
+    /**
+     * Elimina un proyecto junto con sus colaboradores asociados.
+     * Valida que el proyecto exista antes de eliminar.
+     * 
+     * @param id ID del proyecto a eliminar
+     */
     public void eliminarProyecto(Long id) {
+        // 1. Eliminar primero los colaboradores
+        collaboratorRepository.deleteByProjectId(id);
+        
+        // 2. Limpiar el caché de Hibernate
+        entityManager.flush();
+        entityManager.clear();
+        
+        // 3. Eliminar el proyecto
         proyectoRepository.deleteById(id);
+        
+        // 4. Forzar sincronización con la base de datos
+        entityManager.flush();
+    }
+
+    /**
+     * Elimina un colaborador de un proyecto.
+     * 
+     * @param projectId ID del proyecto
+     * @param userId ID del colaborador
+     */
+    public void eliminarColaborador(Long projectId, Long userId) {
+        // Elimina la relación entre el proyecto y el colaborador en la tabla intermedia
+        proyectoRepository.deleteCollaborator(projectId, userId);
     }
 }

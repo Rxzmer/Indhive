@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import background from '../assets/background.jpg';
 import { Link } from 'react-router-dom';
-import './Register.css'; // Reutilizamos el CSS de registro
+import Footer from './Footer'; 
+import './Register.css'; 
 
 const Login = () => {
   const navigate = useNavigate();
@@ -100,6 +101,7 @@ const Login = () => {
           </Link>
         </form>
       </div>
+      <Footer />
     </div>
   );
 };

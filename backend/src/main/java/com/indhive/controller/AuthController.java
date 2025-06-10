@@ -1,19 +1,19 @@
 package com.indhive.controller;
 
-import com.indhive.model.RevokedToken;
-import com.indhive.model.User;
-import com.indhive.repository.UserRepository;
-import com.indhive.repository.RevokedTokenRepository;
-import com.indhive.security.JwtUtils;
-import com.indhive.security.LoginAttemptService;
 import com.indhive.dto.EmailDTO;
 import com.indhive.dto.LoginRequest;
 import com.indhive.dto.ResetPasswordDTO;
+import com.indhive.dto.UserDTO;
+import com.indhive.model.RevokedToken;
+import com.indhive.model.User;
+import com.indhive.repository.RevokedTokenRepository;
+import com.indhive.repository.UserRepository;
+import com.indhive.security.JwtUtils;
+import com.indhive.security.LoginAttemptService;
 import com.indhive.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +24,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.Date;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -59,14 +58,14 @@ public class AuthController {
         User savedUser = userRepository.save(user);
         savedUser.setPassword(null); // limpiar hash antes de devolver
 
-        return ResponseEntity.ok(savedUser);
+        return ResponseEntity.ok(new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRoles()));
     }
 
     @PostMapping("/recover")
     public ResponseEntity<?> recoverPassword(@RequestBody EmailDTO emailDTO) {
         Optional<User> userOpt = userRepository.findByEmail(emailDTO.getEmail());
         if (userOpt.isPresent()) {
-            String token = jwtUtils.generateJwtToken(userOpt.get().getEmail(), userOpt.get().getRoles());
+            String token = jwtUtils.generateJwtToken(userOpt.get().getEmail(), normalizeRoles(userOpt.get().getRoles()));
             String recoveryUrl = "http://localhost:3000/reset-password?token=" + token;
 
             emailService.sendSimpleMessage(
@@ -124,7 +123,8 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Usuario no encontrado");
             }
 
-            String token = jwtUtils.generateJwtToken(email, userOpt.get().getRoles());
+            String normalizedRoles = normalizeRoles(userOpt.get().getRoles());
+            String token = jwtUtils.generateJwtToken(email, normalizedRoles);
 
             return ResponseEntity.ok(Map.of("token", token));
         } catch (BadCredentialsException e) {
@@ -149,8 +149,7 @@ public class AuthController {
         }
 
         User user = userOpt.get();
-        user.setPassword(null);
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles()));
     }
 
     @PostMapping("/logout")
@@ -179,7 +178,16 @@ public class AuthController {
             return ResponseEntity.status(404).body("Usuario no encontrado");
         }
 
-        String newToken = jwtUtils.generateJwtToken(email, userOpt.get().getRoles());
+        String normalizedRoles = normalizeRoles(userOpt.get().getRoles());
+        String newToken = jwtUtils.generateJwtToken(email, normalizedRoles);
+
         return ResponseEntity.ok(Map.of("token", newToken));
+    }
+
+    private String normalizeRoles(String rawRoles) {
+        return Arrays.stream(rawRoles.split(","))
+            .map(String::trim)
+            .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+            .collect(Collectors.joining(","));
     }
 }

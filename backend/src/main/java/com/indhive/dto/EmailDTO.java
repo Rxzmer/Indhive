@@ -1,7 +1,12 @@
 package com.indhive.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class EmailDTO {
 
+    @NotBlank(message = "El correo no puede estar vacío")
+    @Email(message = "El correo debe tener un formato válido")
     private String email;
 
     public EmailDTO() {}

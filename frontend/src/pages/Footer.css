@@ -1,0 +1,43 @@
+/* Footer.css */
+.footer {
+  background-color: #ffffff00;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 0.1;
+}
+
+/* Si el footer está en la columna de la izquierda */
+.footer.left {
+  position: absolute;  /* Hace que el footer esté en la columna izquierda */
+  left: 4%;
+  top: 95%;
+  transform: translateY(-50%);  /* Centra el footer verticalmente en la columna */
+  width: 200px;  /* Ajusta el ancho para que ocupe solo el espacio de la columna */
+  font-size: 0.7em
+}
+
+.github-icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 10px;
+  vertical-align: middle;
+  
+}
+
+/* Estilo para el enlace */
+.footer a {
+  color: #ffffff; /* Enlace blanco por defecto */
+  text-decoration: none; /* Eliminar subrayado */
+  font-weight: bold; /* Si quieres que el enlace se vea más destacado */
+}
+
+.footer a:hover {
+  color: #5e7abd; /* Cambia el color al color distintivo de la página cuando se pase el ratón */
+}

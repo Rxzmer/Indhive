@@ -64,11 +64,22 @@ const ProjectListModal = ({ onClose }) => {
           </table>
         </div>
 
+        <div class="table-container">
+  <table class="modal-table">
+  </table>
+</div>
+<div class="table-container">
+  <table class="search-table">
+  </table>
+</div>
+
         <div className="modal-buttons">
           <button className="register-button" onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>
+
+    
   );
 };
 

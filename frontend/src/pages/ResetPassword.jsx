@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import './Register.css';
 import background from '../assets/background.jpg';
 
+
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const ResetPassword = () => {
       <div className="register-card">
         <button
           className="register-close"
-          onClick={() => navigate('/register')}
+          onClick={() => navigate('/login')}
         >
           ✕
         </button>
@@ -72,6 +73,7 @@ const ResetPassword = () => {
         </form>
         {message && <p style={{ marginTop: '1rem', color: 'white' }}>{message}</p>}
       </div>
+      
     </div>
   );
 };

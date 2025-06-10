@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/LogoInd.png';
 import './Landing.css';
-
+import Footer from './Footer'; 
 const Landing = () => {
   return (
     <div className="landing-container">
@@ -32,6 +32,7 @@ const Landing = () => {
 
         <div className="landing-right" />
       </div>
+      <Footer />
     </div>
   );
 };

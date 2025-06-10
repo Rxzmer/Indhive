@@ -24,21 +24,20 @@ public class Project {
     @NotBlank
     private String title;
 
-    @Column(length = 2000)
+    @Lob
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String description;
 
-    // Relación Many-to-One con User, representa al dueño del proyecto (propietario)
+    // Relación Many-to-One con User, representa al dueño del proyecto
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false, referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_project_owner"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User owner;
 
-    // Relación Many-to-Many con usuarios colaboradores del proyecto
-    @ManyToMany
-    @JoinTable(name = "project_collaborators", joinColumns = @JoinColumn(name = "project_id"), inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"), foreignKey = @ForeignKey(name = "fk_project_collaborators_project"), inverseForeignKey = @ForeignKey(name = "fk_project_collaborators_user"))
-    private Set<User> collaborators = new HashSet<>();
+    // Nueva relación con entidad intermedia
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProjectCollaborator> collaborators = new HashSet<>();
 
-    // Constructores
     public Project() {
     }
 
@@ -81,11 +80,11 @@ public class Project {
         this.owner = owner;
     }
 
-    public Set<User> getCollaborators() {
+    public Set<ProjectCollaborator> getCollaborators() {
         return collaborators;
     }
 
-    public void setCollaborators(Set<User> collaborators) {
+    public void setCollaborators(Set<ProjectCollaborator> collaborators) {
         this.collaborators = collaborators;
     }
 }

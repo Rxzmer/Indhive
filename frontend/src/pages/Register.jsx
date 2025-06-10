@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import background from '../assets/background.jpg';
 import './Register.css';
+import Footer from './Footer';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -84,6 +85,7 @@ const Register = () => {
         {success && <p className="register-success">{success}</p>}
         {error && <p className="register-error">{error}</p>}
       </div>
+      <Footer />
     </div>
   );
 };

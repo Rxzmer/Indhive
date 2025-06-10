@@ -1,81 +1,53 @@
-.user-list-modal {
-  padding: 2rem;
-  background-color: #2c2f36;
-  border-radius: 10px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: fadeIn 0.2s ease-in-out;
-}
-
-.styled-table th,
-.styled-table td {
-  padding: 12px;
-  border-bottom: 1px solid #444;
-}
-
-.table-input,
-.table-select {
-  background-color: #1e1e1e;
-  border: 1px solid #444;
-  color: white;
-  padding: 6px;
-  border-radius: 4px;
+/* Modal de confirmación */
+.confirm-delete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-}
-
-.edit-actions {
+  height: 100%;
+  /*background-color: rgba(0, 0, 0, 0.6);*/
+  backdrop-filter: blur(6px);
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  /*animation: fadeIn 0.3s ease-out;*/
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+.confirm-delete-modal .modal-content {
+  background-color: #2a2d34;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 450px;
+  border: 1px solid #444c56;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.red-button {
-  background-color: #e5534b;
-  color: white;
-  border: none;
-  transition: background-color 0.2s ease-in-out;
+.confirm-delete-modal h4 {
+  color: #f0f6fc;
+  margin-bottom: 1.75rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  font-weight: 500;
+  text-align: center;
 }
 
-.red-button:hover {
-  background-color: #c8463f;
+.confirm-delete-modal .modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
-.search-input {
-  background-color: #1a1c20; /* más oscuro que el fondo del modal */
-  border: 1px solid #444;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+/* Botón Cancelar específico para este modal */
+.confirm-delete-modal .cancel-button {
+  background-color: transparent;
+  color: #adbac7;
+  border: 1px solid #444c56;
 }
 
-.search-input:focus {
-  background-color: #22252b;
-  outline: none;
+.confirm-delete-modal .cancel-button:hover {
+  background-color: rgba(99, 110, 123, 0.4);
+  border-color: #768390;
 }
-
-.role-tag {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-  text-transform: capitalize;
-}
-
-.role-tag.role_user {
-  background-color: #444;
-  color: #eee;
-}
-
-.role-tag.role_admin {
-  background-color: #e5534b;
-  color: white;
-}
-
-

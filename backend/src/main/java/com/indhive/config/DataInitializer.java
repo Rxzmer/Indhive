@@ -19,9 +19,9 @@ public class DataInitializer {
             if (userRepository.findByUsername(adminUsername).isEmpty()) {
                 User admin = new User();
                 admin.setUsername(adminUsername);
-                admin.setPassword(passwordEncoder.encode("admin123")); // Contraseña cifrada
+                admin.setPassword(passwordEncoder.encode("Admin_Password")); // Contraseña cifrada
                 admin.setEmail("admin@indhive.com");
-                admin.setRoles("ROLE_ADMIN,ROLE_USER");
+                admin.setRoles("ROLE_ADMIN");
                 userRepository.save(admin);
                 System.out.println("Usuario admin creado automáticamente.");
             } else {
